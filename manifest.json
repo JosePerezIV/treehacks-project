@@ -14,7 +14,8 @@
     "https://*.bestbuy.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -24,7 +25,7 @@
         "https://*.target.com/*",
         "https://*.bestbuy.com/*"
       ],
-      "js": ["lib/leaflet.js", "utils.js", "config.js", "api.js", "content.js"],
+      "js": ["lib/leaflet.js", "utils.js", "content.js"],
       "css": ["lib/leaflet.css", "styles.css"],
       "run_at": "document_idle"
     }

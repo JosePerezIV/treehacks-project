@@ -286,33 +286,54 @@ async function analyzeProductWithAPI(data) {
       location: settings.settings?.location || null
     };
 
-    // Call API
-    const analysis = await analyzeProduct(data.name, userPreferences);
+    // Call API via background script (avoids CORS issues)
+    chrome.runtime.sendMessage({
+      action: 'analyzeProduct',
+      productName: data.name,
+      userPreferences: userPreferences
+    }, (response) => {
+      showAnalysisLoading(false);
 
-    // Update UI with results
-    updateCompanyAnalysis(analysis);
-    updateCostBenefitAnalysis(analysis.costBenefitAnalysis);
+      if (chrome.runtime.lastError) {
+        console.error('Vinegar: Runtime error:', chrome.runtime.lastError);
+        showAnalysisError('Unable to analyze product. Please try again later.');
+        const fallback = getFallbackAnalysis(data.name);
+        updateCompanyAnalysis(fallback);
+        updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+        return;
+      }
 
-    console.log('Vinegar: API analysis complete');
+      if (response.error) {
+        console.error('Vinegar: API analysis failed:', response.error);
+
+        // Show appropriate error message
+        if (response.error === 'API_RATE_LIMIT') {
+          showAnalysisError('Too many requests. Please try again in a moment.');
+        } else if (response.error === 'PARSE_ERROR') {
+          showAnalysisError('Unable to analyze product. Using basic information.');
+        } else {
+          showAnalysisError('Unable to analyze product. Please try again later.');
+        }
+
+        // Always use fallback on error
+        const fallback = getFallbackAnalysis(data.name);
+        updateCompanyAnalysis(fallback);
+        updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+      } else {
+        // Update UI with results
+        updateCompanyAnalysis(response);
+        updateCostBenefitAnalysis(response.costBenefitAnalysis);
+        console.log('Vinegar: API analysis complete');
+      }
+    });
 
   } catch (error) {
-    console.error('Vinegar: API analysis failed:', error);
+    console.error('Vinegar: Error calling API:', error);
+    showAnalysisError('Unable to analyze product. Please try again later.');
 
-    // Show appropriate error message
-    if (error.message === 'API_RATE_LIMIT') {
-      showAnalysisError('Too many requests. Please try again in a moment.');
-    } else if (error.message === 'PARSE_ERROR') {
-      showAnalysisError('Unable to analyze product. Using basic information.');
-    } else {
-      showAnalysisError('Unable to analyze product. Please try again later.');
-    }
-
-    // Always use fallback on error
     const fallback = getFallbackAnalysis(data.name);
     updateCompanyAnalysis(fallback);
     updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
-
-  } finally {
     showAnalysisLoading(false);
   }
 }
@@ -802,6 +823,21 @@ function createAlternativeCard(alt) {
   `;
 
   return card;
+}
+
+/**
+ * Get fallback analysis when API fails
+ */
+function getFallbackAnalysis(productName) {
+  return {
+    parentCompany: 'Unknown',
+    ethicalScore: 50,
+    concerns: ['Unable to analyze - API unavailable'],
+    productCategory: 'General',
+    alternativeTypes: ['Local businesses', 'Sustainable options', 'Fair trade alternatives'],
+    costBenefitAnalysis: 'Supporting local and ethical businesses helps build stronger communities, promotes fair labor practices, and reduces environmental impact.',
+    suggestedStoreKeywords: ['local', 'sustainable', 'ethical']
+  };
 }
 
 /**
