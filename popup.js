@@ -17,7 +17,6 @@ const DEFAULT_SETTINGS = {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
   await loadLocation();
-  await loadApiKeyStatus();
   setupEventListeners();
   updateStats();
 });
@@ -435,73 +434,6 @@ function getMockCoordinatesForZip(zipCode) {
 }
 
 /**
- * Load and display API key status
- */
-async function loadApiKeyStatus() {
-  try {
-    const result = await chrome.storage.sync.get('anthropicApiKey');
-    const apiKey = result.anthropicApiKey;
-
-    const statusIcon = document.getElementById('status-icon');
-    const statusText = document.getElementById('status-text');
-
-    if (!statusIcon || !statusText) return;
-
-    if (apiKey && apiKey.length > 0) {
-      statusIcon.textContent = '✅';
-      statusText.textContent = 'API Key Set';
-      statusText.style.color = '#2e7d32';
-    } else {
-      statusIcon.textContent = '❌';
-      statusText.textContent = 'API Key Not Set';
-      statusText.style.color = '#c0392b';
-    }
-  } catch (error) {
-    console.error('Error loading API key status:', error);
-  }
-}
-
-/**
- * Save API key
- */
-async function saveApiKey() {
-  const input = document.getElementById('api-key-input');
-
-  if (!input) return;
-
-  const apiKey = input.value.trim();
-
-  // Validate API key format
-  if (!apiKey) {
-    alert('Please enter an API key');
-    return;
-  }
-
-  if (!apiKey.startsWith('sk-ant-')) {
-    alert('Invalid API key format. Anthropic API keys start with "sk-ant-"');
-    return;
-  }
-
-  try {
-    // Save to storage
-    await chrome.storage.sync.set({ anthropicApiKey: apiKey });
-
-    // Clear input
-    input.value = '';
-
-    // Update status
-    await loadApiKeyStatus();
-
-    // Show success
-    showSaveNotification('🔑 API key saved!');
-
-  } catch (error) {
-    console.error('Error saving API key:', error);
-    alert('Failed to save API key. Please try again.');
-  }
-}
-
-/**
  * Setup event listeners
  */
 function setupEventListeners() {
@@ -556,22 +488,6 @@ function setupEventListeners() {
     zipInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         submitZipCode();
-      }
-    });
-  }
-
-  // API key save button
-  const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-  if (saveApiKeyBtn) {
-    saveApiKeyBtn.addEventListener('click', saveApiKey);
-  }
-
-  // API key input - save on Enter key
-  const apiKeyInput = document.getElementById('api-key-input');
-  if (apiKeyInput) {
-    apiKeyInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        saveApiKey();
       }
     });
   }

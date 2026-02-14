@@ -299,25 +299,19 @@ async function analyzeProductWithAPI(data) {
     console.error('Vinegar: API analysis failed:', error);
 
     // Show appropriate error message
-    if (error.message === 'API_KEY_MISSING') {
-      showAnalysisError('API key not set. Add your Anthropic API key in the extension settings.');
-    } else if (error.message === 'API_KEY_INVALID') {
-      showAnalysisError('Invalid API key. Please check your Anthropic API key in settings.');
-    } else if (error.message === 'API_RATE_LIMIT') {
-      showAnalysisError('API rate limit reached. Please try again later.');
+    if (error.message === 'API_RATE_LIMIT') {
+      showAnalysisError('Too many requests. Please try again in a moment.');
     } else if (error.message === 'PARSE_ERROR') {
-      showAnalysisError('Failed to parse API response. Using fallback analysis.');
-      // Use fallback
-      const fallback = getFallbackAnalysis(data.name);
-      updateCompanyAnalysis(fallback);
-      updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+      showAnalysisError('Unable to analyze product. Using basic information.');
     } else {
-      showAnalysisError('Analysis failed. Using basic information.');
-      // Use fallback
-      const fallback = getFallbackAnalysis(data.name);
-      updateCompanyAnalysis(fallback);
-      updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+      showAnalysisError('Unable to analyze product. Please try again later.');
     }
+
+    // Always use fallback on error
+    const fallback = getFallbackAnalysis(data.name);
+    updateCompanyAnalysis(fallback);
+    updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+
   } finally {
     showAnalysisLoading(false);
   }

@@ -13,12 +13,6 @@ async function analyzeProduct(productName, userPreferences = {}) {
   console.log('Vinegar API: Analyzing product:', productName);
 
   try {
-    // Get API key from storage
-    const apiKey = await getApiKey();
-
-    if (!apiKey) {
-      throw new Error('API_KEY_MISSING');
-    }
 
     // Build the prompt
     const prompt = buildAnalysisPrompt(productName, userPreferences);
@@ -28,7 +22,7 @@ async function analyzeProduct(productName, userPreferences = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': CONFIG.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
@@ -47,9 +41,7 @@ async function analyzeProduct(productName, userPreferences = {}) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Vinegar API: API error:', errorData);
 
-      if (response.status === 401) {
-        throw new Error('API_KEY_INVALID');
-      } else if (response.status === 429) {
+      if (response.status === 429) {
         throw new Error('API_RATE_LIMIT');
       } else {
         throw new Error(`API_ERROR: ${response.status}`);
@@ -153,40 +145,6 @@ function parseClaudeResponse(text) {
 }
 
 /**
- * Get API key from storage
- */
-async function getApiKey() {
-  try {
-    const result = await chrome.storage.sync.get('anthropicApiKey');
-    return result.anthropicApiKey || null;
-  } catch (error) {
-    console.error('Vinegar API: Error getting API key:', error);
-    return null;
-  }
-}
-
-/**
- * Set API key in storage
- */
-async function setApiKey(apiKey) {
-  try {
-    await chrome.storage.sync.set({ anthropicApiKey: apiKey });
-    return true;
-  } catch (error) {
-    console.error('Vinegar API: Error setting API key:', error);
-    return false;
-  }
-}
-
-/**
- * Check if API key is set
- */
-async function hasApiKey() {
-  const apiKey = await getApiKey();
-  return !!apiKey;
-}
-
-/**
  * Get fallback analysis when API fails
  */
 function getFallbackAnalysis(productName) {
@@ -205,9 +163,6 @@ function getFallbackAnalysis(productName) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     analyzeProduct,
-    setApiKey,
-    getApiKey,
-    hasApiKey,
     getFallbackAnalysis
   };
 }
