@@ -262,8 +262,163 @@ function initializePanelContent(data) {
     console.log('Vinegar: Set product site:', data.site);
   }
 
+  // Start API analysis (async)
+  analyzeProductWithAPI(data);
+
   // Load alternatives
   setTimeout(() => loadAlternatives(data), 500);
+}
+
+/**
+ * Analyze product using Claude API
+ */
+async function analyzeProductWithAPI(data) {
+  console.log('Vinegar: Starting API analysis');
+
+  // Show loading state
+  showAnalysisLoading(true);
+
+  try {
+    // Get user preferences
+    const settings = await chrome.storage.sync.get('settings');
+    const userPreferences = {
+      avoidedBrands: settings.settings?.avoidedBrands || [],
+      location: settings.settings?.location || null
+    };
+
+    // Call API
+    const analysis = await analyzeProduct(data.name, userPreferences);
+
+    // Update UI with results
+    updateCompanyAnalysis(analysis);
+    updateCostBenefitAnalysis(analysis.costBenefitAnalysis);
+
+    console.log('Vinegar: API analysis complete');
+
+  } catch (error) {
+    console.error('Vinegar: API analysis failed:', error);
+
+    // Show appropriate error message
+    if (error.message === 'API_KEY_MISSING') {
+      showAnalysisError('API key not set. Add your Anthropic API key in the extension settings.');
+    } else if (error.message === 'API_KEY_INVALID') {
+      showAnalysisError('Invalid API key. Please check your Anthropic API key in settings.');
+    } else if (error.message === 'API_RATE_LIMIT') {
+      showAnalysisError('API rate limit reached. Please try again later.');
+    } else if (error.message === 'PARSE_ERROR') {
+      showAnalysisError('Failed to parse API response. Using fallback analysis.');
+      // Use fallback
+      const fallback = getFallbackAnalysis(data.name);
+      updateCompanyAnalysis(fallback);
+      updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+    } else {
+      showAnalysisError('Analysis failed. Using basic information.');
+      // Use fallback
+      const fallback = getFallbackAnalysis(data.name);
+      updateCompanyAnalysis(fallback);
+      updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+    }
+  } finally {
+    showAnalysisLoading(false);
+  }
+}
+
+/**
+ * Show/hide loading state for analysis
+ */
+function showAnalysisLoading(isLoading) {
+  const companyInfo = document.getElementById('company-info');
+  if (!companyInfo) return;
+
+  if (isLoading) {
+    companyInfo.innerHTML = `
+      <div style="text-align: center; padding: 30px 20px;">
+        <div class="spinner" style="margin: 0 auto 16px;"></div>
+        <p style="font-size: 13px; color: var(--text-medium);">Analyzing product with AI...</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * Update company analysis section with API results
+ */
+function updateCompanyAnalysis(analysis) {
+  const companyInfo = document.getElementById('company-info');
+  if (!companyInfo) return;
+
+  const concernsHTML = analysis.concerns && analysis.concerns.length > 0
+    ? `<div style="margin-top: 12px;">
+         ${analysis.concerns.map(concern => `
+           <div style="display: flex; align-items: center; gap: 6px; padding: 6px 0; font-size: 12px; color: #e74c3c;">
+             <span>⚠️</span>
+             <span>${concern}</span>
+           </div>
+         `).join('')}
+       </div>`
+    : '';
+
+  companyInfo.innerHTML = `
+    <div class="company-badge">
+      <span class="badge-icon">🏢</span>
+      <span class="badge-text">Parent Company: <strong id="parent-company">${analysis.parentCompany}</strong></span>
+    </div>
+    <div class="ethical-score">
+      <span class="score-label">Ethical Score:</span>
+      <div class="score-bar">
+        <div class="score-fill" id="ethical-score-fill" style="width: ${analysis.ethicalScore}%"></div>
+      </div>
+      <span class="score-value" id="ethical-score-value">${analysis.ethicalScore}/100</span>
+    </div>
+    ${concernsHTML}
+  `;
+}
+
+/**
+ * Update cost-benefit analysis section
+ */
+function updateCostBenefitAnalysis(analysisText) {
+  const costBenefit = document.getElementById('cost-benefit');
+  if (!costBenefit) return;
+
+  costBenefit.innerHTML = `
+    <div class="benefit-item">
+      <span class="benefit-icon">🤖</span>
+      <span class="benefit-text" style="font-style: italic;">${analysisText}</span>
+    </div>
+    <div class="benefit-item">
+      <span class="benefit-icon">💰</span>
+      <span class="benefit-text">Support local economy</span>
+    </div>
+    <div class="benefit-item">
+      <span class="benefit-icon">🌱</span>
+      <span class="benefit-text">Reduced carbon footprint</span>
+    </div>
+    <div class="benefit-item">
+      <span class="benefit-icon">🤝</span>
+      <span class="benefit-text">Fair labor practices</span>
+    </div>
+  `;
+}
+
+/**
+ * Show error message in analysis section
+ */
+function showAnalysisError(message) {
+  const companyInfo = document.getElementById('company-info');
+  if (!companyInfo) return;
+
+  companyInfo.innerHTML = `
+    <div style="padding: 16px; background: #fff3e0; border-radius: 8px; border-left: 4px solid #f39c12;">
+      <div style="display: flex; align-items: start; gap: 10px;">
+        <span style="font-size: 20px;">ℹ️</span>
+        <div>
+          <p style="font-size: 13px; color: #e65100; margin: 0 0 8px 0; font-weight: 600;">Analysis Unavailable</p>
+          <p style="font-size: 12px; color: #7d5a00; margin: 0;">${message}</p>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 /**

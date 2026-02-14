@@ -425,6 +425,94 @@
       color: #c0392b;
       margin-top: 12px;
     }
+
+    /* API Key Section */
+    .api-key-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .api-key-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #f5f7f0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .status-icon {
+      font-size: 18px;
+    }
+
+    .status-text {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: #2d4a2b;
+    }
+
+    .api-key-input-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .api-key-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #d4dac9;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: monospace;
+      transition: border-color 0.2s ease;
+    }
+
+    .api-key-input:focus {
+      outline: none;
+      border-color: #7ba05b;
+    }
+
+    .save-api-key-btn {
+      padding: 10px 20px;
+      background: #7ba05b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .save-api-key-btn:hover {
+      background: #5d7e47;
+    }
+
+    .api-key-help {
+      padding: 12px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #2e7d32;
+    }
+
+    .api-key-help p {
+      margin: 0;
+    }
+
+    .api-key-help a {
+      color: #2e7d32;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .api-key-help a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -516,6 +604,36 @@
 
         <!-- Error Message -->
         <div id="location-error" class="location-error" style="display: none;"></div>
+      </div>
+    </div>
+
+    <!-- API Key Section -->
+    <div class="settings-section">
+      <h2 class="section-title">AI Analysis (Claude API)</h2>
+      <div class="api-key-section">
+        <!-- API Key Status -->
+        <div class="api-key-status" id="api-key-status">
+          <span class="status-icon" id="status-icon">❌</span>
+          <span class="status-text" id="status-text">API Key Not Set</span>
+        </div>
+
+        <!-- API Key Input -->
+        <div class="api-key-input-container">
+          <input
+            type="password"
+            id="api-key-input"
+            class="api-key-input"
+            placeholder="Enter Anthropic API key (sk-ant-...)"
+            maxlength="200"
+          >
+          <button id="save-api-key-btn" class="save-api-key-btn">Save</button>
+        </div>
+
+        <!-- Help Text -->
+        <div class="api-key-help">
+          <p>Get your API key from <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></p>
+          <p style="font-size: 11px; margin-top: 4px; opacity: 0.8;">Required for AI-powered product analysis and ethical scoring</p>
+        </div>
       </div>
     </div>
 
