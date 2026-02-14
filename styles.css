@@ -352,6 +352,36 @@
   font-size: 14px;
 }
 
+/* Distance badge */
+.alt-distance {
+  margin-bottom: 12px;
+}
+
+.distance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.distance-badge.distance-near {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.distance-badge.distance-medium {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.distance-badge.distance-far {
+  background: #f5f7f0;
+  color: #7ba05b;
+}
+
 .alt-features {
   display: flex;
   flex-wrap: wrap;

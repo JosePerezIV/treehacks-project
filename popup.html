@@ -288,6 +288,143 @@
         transform: translateX(0);
       }
     }
+
+    /* Location Section */
+    .location-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .location-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: #f5f7f0;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .location-icon {
+      font-size: 20px;
+    }
+
+    .location-text {
+      flex: 1;
+    }
+
+    .location-label {
+      font-size: 11px;
+      color: #7ba05b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      display: block;
+    }
+
+    .location-value {
+      font-size: 14px;
+      color: #2d4a2b;
+      font-weight: 500;
+    }
+
+    .location-value.not-set {
+      color: #999;
+      font-style: italic;
+    }
+
+    .detect-location-btn {
+      width: 100%;
+      padding: 12px;
+      background: #7ba05b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .detect-location-btn:hover {
+      background: #5d7e47;
+    }
+
+    .detect-location-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .detect-location-btn.loading {
+      background: #9cb87f;
+    }
+
+    .spinner-small {
+      width: 14px;
+      height: 14px;
+      border: 2px solid white;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .zip-input-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    .zip-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #d4dac9;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s ease;
+    }
+
+    .zip-input:focus {
+      outline: none;
+      border-color: #7ba05b;
+    }
+
+    .zip-submit-btn {
+      padding: 10px 16px;
+      background: #7ba05b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .zip-submit-btn:hover {
+      background: #5d7e47;
+    }
+
+    .location-error {
+      padding: 8px 12px;
+      background: #ffe6e6;
+      border-left: 3px solid #e74c3c;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #c0392b;
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
@@ -346,6 +483,42 @@
       </div>
     </div>
 
+    <!-- Location Section -->
+    <div class="settings-section">
+      <h2 class="section-title">Your Location</h2>
+      <div class="location-section">
+        <!-- Location Status -->
+        <div class="location-status">
+          <span class="location-icon">📍</span>
+          <div class="location-text">
+            <span class="location-label">Current Location</span>
+            <span class="location-value not-set" id="location-display">Not set</span>
+          </div>
+        </div>
+
+        <!-- Detect Location Button -->
+        <button id="detect-location-btn" class="detect-location-btn">
+          <span id="location-btn-text">📍 Detect My Location</span>
+        </button>
+
+        <!-- Manual ZIP Code Fallback -->
+        <div class="zip-input-container">
+          <input
+            type="text"
+            id="zip-input"
+            class="zip-input"
+            placeholder="Or enter ZIP code manually..."
+            maxlength="10"
+            pattern="[0-9]{5}"
+          >
+          <button id="zip-submit-btn" class="zip-submit-btn">Set</button>
+        </div>
+
+        <!-- Error Message -->
+        <div id="location-error" class="location-error" style="display: none;"></div>
+      </div>
+    </div>
+
     <!-- Stats Section -->
     <div class="settings-section">
       <h2 class="section-title">Your Impact</h2>
@@ -373,6 +546,7 @@
     </div>
   </div>
 
+  <script src="utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

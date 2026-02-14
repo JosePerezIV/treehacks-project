@@ -7,7 +7,8 @@
 const DEFAULT_SETTINGS = {
   supportLocal: true,
   sustainableProducts: true,
-  avoidedBrands: [] // Array of brand names to avoid
+  avoidedBrands: [], // Array of brand names to avoid
+  location: null // { lat, lon, display, zipCode }
 };
 
 /**
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS = {
  */
 document.addEventListener('DOMContentLoaded', async () => {
   await loadSettings();
+  await loadLocation();
   setupEventListeners();
   updateStats();
 });
@@ -33,8 +35,34 @@ async function loadSettings() {
 
     // Load and display avoided brands
     loadBrandsList(settings.avoidedBrands || []);
+
+    // Load location is called separately in initialize
   } catch (error) {
     console.error('Error loading settings:', error);
+  }
+}
+
+/**
+ * Load and display location
+ */
+async function loadLocation() {
+  try {
+    const result = await chrome.storage.sync.get('settings');
+    const settings = result.settings || DEFAULT_SETTINGS;
+    const location = settings.location;
+
+    const locationDisplay = document.getElementById('location-display');
+    if (!locationDisplay) return;
+
+    if (location && location.lat && location.lon) {
+      locationDisplay.textContent = location.display || estimateCityState(location.lat, location.lon);
+      locationDisplay.classList.remove('not-set');
+    } else {
+      locationDisplay.textContent = 'Not set';
+      locationDisplay.classList.add('not-set');
+    }
+  } catch (error) {
+    console.error('Error loading location:', error);
   }
 }
 
@@ -222,6 +250,190 @@ async function removeBrand(brandName) {
 }
 
 /**
+ * Detect user's location using geolocation API
+ */
+async function detectLocation() {
+  const btn = document.getElementById('detect-location-btn');
+  const btnText = document.getElementById('location-btn-text');
+  const errorDiv = document.getElementById('location-error');
+
+  if (!btn || !btnText) return;
+
+  // Hide any previous errors
+  if (errorDiv) errorDiv.style.display = 'none';
+
+  // Show loading state
+  btn.disabled = true;
+  btn.classList.add('loading');
+  btnText.innerHTML = '<div class="spinner-small"></div> Detecting...';
+
+  try {
+    // Request geolocation
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+    });
+
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+
+    // Validate coordinates
+    if (!isValidCoordinates(lat, lon)) {
+      throw new Error('Invalid coordinates received');
+    }
+
+    // Get location description
+    const display = estimateCityState(lat, lon);
+
+    // Save location
+    await saveLocation(lat, lon, display);
+
+    // Update display
+    await loadLocation();
+
+    // Show success message
+    showSaveNotification('📍 Location detected!');
+
+  } catch (error) {
+    console.error('Geolocation error:', error);
+
+    // Show user-friendly error message
+    let errorMessage = 'Could not detect location. ';
+
+    if (error.code === 1) {
+      errorMessage += 'Please allow location access in your browser settings.';
+    } else if (error.code === 2) {
+      errorMessage += 'Location service unavailable. Try entering your ZIP code instead.';
+    } else if (error.code === 3) {
+      errorMessage += 'Request timed out. Try again or enter your ZIP code.';
+    } else {
+      errorMessage += 'Please try again or enter your ZIP code manually.';
+    }
+
+    if (errorDiv) {
+      errorDiv.textContent = errorMessage;
+      errorDiv.style.display = 'block';
+    }
+
+  } finally {
+    // Reset button state
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btnText.textContent = '📍 Detect My Location';
+  }
+}
+
+/**
+ * Submit ZIP code manually
+ */
+async function submitZipCode() {
+  const input = document.getElementById('zip-input');
+  const errorDiv = document.getElementById('location-error');
+
+  if (!input) return;
+
+  const zipCode = input.value.trim();
+
+  // Hide previous errors
+  if (errorDiv) errorDiv.style.display = 'none';
+
+  // Validate ZIP code
+  if (!zipCode) {
+    return;
+  }
+
+  if (!/^\d{5}$/.test(zipCode)) {
+    if (errorDiv) {
+      errorDiv.textContent = 'Please enter a valid 5-digit ZIP code.';
+      errorDiv.style.display = 'block';
+    }
+    return;
+  }
+
+  try {
+    // In production, you would use a ZIP code geocoding API
+    // For now, we'll use mock coordinates
+    const mockCoords = getMockCoordinatesForZip(zipCode);
+
+    await saveLocation(mockCoords.lat, mockCoords.lon, `ZIP ${zipCode}`, zipCode);
+
+    // Update display
+    await loadLocation();
+
+    // Clear input
+    input.value = '';
+
+    // Show success
+    showSaveNotification('📍 ZIP code saved!');
+
+  } catch (error) {
+    console.error('Error saving ZIP code:', error);
+    if (errorDiv) {
+      errorDiv.textContent = 'Failed to save ZIP code. Please try again.';
+      errorDiv.style.display = 'block';
+    }
+  }
+}
+
+/**
+ * Save location to storage
+ */
+async function saveLocation(lat, lon, display, zipCode = null) {
+  try {
+    const result = await chrome.storage.sync.get('settings');
+    const settings = result.settings || DEFAULT_SETTINGS;
+
+    settings.location = {
+      lat,
+      lon,
+      display,
+      zipCode,
+      timestamp: Date.now()
+    };
+
+    await chrome.storage.sync.set({ settings });
+
+    // Notify content scripts
+    chrome.runtime.sendMessage({
+      type: 'SETTINGS_UPDATED',
+      data: settings
+    }).catch(() => {});
+
+  } catch (error) {
+    console.error('Error saving location:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get mock coordinates for ZIP code (placeholder)
+ * In production, use a real ZIP code geocoding API
+ */
+function getMockCoordinatesForZip(zipCode) {
+  // Mock data - in production, use real API
+  const firstDigit = zipCode.charAt(0);
+
+  // Rough US regions based on ZIP code first digit
+  const regions = {
+    '0': { lat: 42.36, lon: -71.06 }, // New England
+    '1': { lat: 40.71, lon: -74.01 }, // New York area
+    '2': { lat: 38.91, lon: -77.04 }, // DC area
+    '3': { lat: 33.75, lon: -84.39 }, // Atlanta area
+    '4': { lat: 39.96, lon: -83.00 }, // Ohio area
+    '5': { lat: 41.88, lon: -87.63 }, // Chicago area
+    '6': { lat: 38.63, lon: -90.20 }, // St. Louis area
+    '7': { lat: 32.78, lon: -96.80 }, // Dallas area
+    '8': { lat: 39.74, lon: -104.99 }, // Denver area
+    '9': { lat: 37.77, lon: -122.42 }  // SF area
+  };
+
+  return regions[firstDigit] || { lat: 39.0, lon: -98.0 }; // Center of US
+}
+
+/**
  * Setup event listeners
  */
 function setupEventListeners() {
@@ -254,6 +466,28 @@ function setupEventListeners() {
     brandInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         addBrand();
+      }
+    });
+  }
+
+  // Location detection button
+  const detectLocationBtn = document.getElementById('detect-location-btn');
+  if (detectLocationBtn) {
+    detectLocationBtn.addEventListener('click', detectLocation);
+  }
+
+  // ZIP code submission
+  const zipSubmitBtn = document.getElementById('zip-submit-btn');
+  if (zipSubmitBtn) {
+    zipSubmitBtn.addEventListener('click', submitZipCode);
+  }
+
+  // ZIP input - submit on Enter key
+  const zipInput = document.getElementById('zip-input');
+  if (zipInput) {
+    zipInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        submitZipCode();
       }
     });
   }

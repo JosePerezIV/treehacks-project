@@ -44,7 +44,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["sidepanel.html", "sidepanel.js", "styles.css"],
+      "resources": ["sidepanel.html", "styles.css", "utils.js"],
       "matches": [
         "https://*.amazon.com/*",
         "https://*.walmart.com/*",

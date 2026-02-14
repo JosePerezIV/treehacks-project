@@ -6,6 +6,7 @@
 // Track if panel is already injected
 let isPanelInjected = false;
 let productData = null;
+let userLocation = null;
 
 /**
  * Detect which site we're on and extract product information
@@ -145,6 +146,23 @@ async function injectSidePanel(data) {
   productData = data;
 
   try {
+    // Load user location from storage
+    const settings = await chrome.storage.sync.get('settings');
+    if (settings.settings?.location) {
+      userLocation = settings.settings.location;
+      console.log('Vinegar: User location loaded:', userLocation);
+    }
+
+    // Inject utils.js first (for distance calculations)
+    const utilsScript = document.createElement('script');
+    utilsScript.src = chrome.runtime.getURL('utils.js');
+    document.head.appendChild(utilsScript);
+
+    await new Promise(resolve => {
+      utilsScript.onload = resolve;
+      setTimeout(resolve, 100); // Fallback timeout
+    });
+
     // Create container for the side panel
     const panelContainer = document.createElement('div');
     panelContainer.id = 'vinegar-sidepanel-container';
@@ -292,13 +310,14 @@ function loadAlternatives(data) {
 }
 
 /**
- * Generate mock alternatives
+ * Generate mock alternatives with location data
  */
 function generateMockAlternatives(data) {
   const productName = data?.name || 'product';
   const basePrice = extractNumericPrice(data?.price);
 
-  return [
+  // Generate alternatives with mock locations
+  const alternatives = [
     {
       name: `Local Shop - ${productName.substring(0, 30)}...`,
       price: formatPrice(basePrice * 1.15),
@@ -306,7 +325,10 @@ function generateMockAlternatives(data) {
       type: 'local',
       typeLabel: 'Local Business',
       features: ['Family-owned', 'Same-day pickup', 'Expert advice'],
-      url: '#'
+      url: '#',
+      // Mock location - nearby
+      lat: userLocation ? userLocation.lat + (Math.random() - 0.5) * 0.1 : null,
+      lon: userLocation ? userLocation.lon + (Math.random() - 0.5) * 0.1 : null
     },
     {
       name: `EcoFriendly - Sustainable Alternative`,
@@ -315,7 +337,10 @@ function generateMockAlternatives(data) {
       type: 'sustainable',
       typeLabel: 'Sustainable',
       features: ['Carbon neutral', 'Recycled materials', 'B-Corp certified'],
-      url: '#'
+      url: '#',
+      // Mock location - medium distance
+      lat: userLocation ? userLocation.lat + (Math.random() - 0.5) * 0.3 : null,
+      lon: userLocation ? userLocation.lon + (Math.random() - 0.5) * 0.3 : null
     },
     {
       name: `Fair Trade Co-op - Similar Product`,
@@ -324,9 +349,31 @@ function generateMockAlternatives(data) {
       type: 'ethical',
       typeLabel: 'Fair Trade',
       features: ['Worker-owned', 'Ethical sourcing', 'Living wages'],
-      url: '#'
+      url: '#',
+      // Mock location - closer
+      lat: userLocation ? userLocation.lat + (Math.random() - 0.5) * 0.15 : null,
+      lon: userLocation ? userLocation.lon + (Math.random() - 0.5) * 0.15 : null
     }
   ];
+
+  // Calculate distances and add distance bonus to ratings
+  if (userLocation && typeof calculateDistance === 'function') {
+    alternatives.forEach(alt => {
+      if (alt.lat && alt.lon) {
+        alt.distance = calculateDistance(userLocation.lat, userLocation.lon, alt.lat, alt.lon);
+        alt.distanceLabel = formatDistance(alt.distance);
+        alt.distanceCategory = categorizeDistance(alt.distance);
+
+        // Add distance bonus to ethical score (0-20 points)
+        alt.distanceBonus = getDistanceBonus(alt.distance);
+      }
+    });
+
+    // Sort by distance (closest first)
+    alternatives.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+  }
+
+  return alternatives;
 }
 
 /**
@@ -356,6 +403,13 @@ function createAlternativeCard(alt) {
 
   const stars = '⭐'.repeat(Math.floor(alt.rating)) + (alt.rating % 1 >= 0.5 ? '✨' : '');
 
+  // Build distance badge HTML if distance is available
+  let distanceBadge = '';
+  if (alt.distanceLabel) {
+    const badgeClass = alt.distance < 10 ? 'distance-near' : alt.distance < 25 ? 'distance-medium' : 'distance-far';
+    distanceBadge = `<span class="distance-badge ${badgeClass}">📍 ${alt.distanceLabel}</span>`;
+  }
+
   card.innerHTML = `
     <div class="alt-header">
       <h4 class="alt-name">${alt.name}</h4>
@@ -368,6 +422,7 @@ function createAlternativeCard(alt) {
         <span class="rating-value">${alt.rating}/5</span>
       </div>
     </div>
+    ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
     <div class="alt-features">
       ${alt.features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
     </div>
