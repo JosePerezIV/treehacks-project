@@ -24,8 +24,8 @@
         "https://*.target.com/*",
         "https://*.bestbuy.com/*"
       ],
-      "js": ["content.js"],
-      "css": ["styles.css"],
+      "js": ["lib/leaflet.js", "utils.js", "content.js"],
+      "css": ["lib/leaflet.css", "styles.css"],
       "run_at": "document_idle"
     }
   ],

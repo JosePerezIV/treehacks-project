@@ -11,6 +11,9 @@ let currentAlternatives = [];
 let map = null;
 let isMapVisible = false;
 
+// Check if Leaflet loaded
+console.log('Vinegar: Content script loaded, Leaflet available:', typeof L !== 'undefined');
+
 /**
  * Detect which site we're on and extract product information
  */
@@ -156,42 +159,8 @@ async function injectSidePanel(data) {
       console.log('Vinegar: User location loaded:', userLocation);
     }
 
-    // Inject Leaflet CSS first
-    const leafletCSS = document.createElement('link');
-    leafletCSS.rel = 'stylesheet';
-    leafletCSS.href = chrome.runtime.getURL('lib/leaflet.css');
-    document.head.appendChild(leafletCSS);
-
-    console.log('Vinegar: Leaflet CSS injected');
-
-    // Inject Leaflet JS
-    const leafletScript = document.createElement('script');
-    leafletScript.src = chrome.runtime.getURL('lib/leaflet.js');
-    document.head.appendChild(leafletScript);
-
-    await new Promise((resolve) => {
-      leafletScript.onload = () => {
-        console.log('Vinegar: Leaflet JS loaded');
-        resolve();
-      };
-      leafletScript.onerror = () => {
-        console.error('Vinegar: Failed to load Leaflet JS');
-        resolve(); // Continue anyway
-      };
-      setTimeout(resolve, 2000); // Fallback timeout
-    });
-
-    // Inject utils.js (for distance calculations)
-    const utilsScript = document.createElement('script');
-    utilsScript.src = chrome.runtime.getURL('utils.js');
-    document.head.appendChild(utilsScript);
-
-    await new Promise(resolve => {
-      utilsScript.onload = resolve;
-      setTimeout(resolve, 100); // Fallback timeout
-    });
-
-    console.log('Vinegar: Utils.js loaded');
+    // Leaflet and utils.js are now loaded via manifest.json content_scripts
+    // No need to inject them dynamically
 
     // Create container for the side panel
     const panelContainer = document.createElement('div');
@@ -425,14 +394,27 @@ function initializeMap() {
 
   // Check if Leaflet is loaded
   if (typeof L === 'undefined') {
-    console.error('Vinegar: Leaflet not loaded');
+    console.error('Vinegar: Leaflet not loaded - this should not happen!');
+    console.error('Vinegar: Please reload the extension and try again');
+
+    // Show error to user
+    mapContainer.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: #e74c3c;">
+        <p style="font-size: 14px; margin-bottom: 10px;">⚠️ Map library failed to load</p>
+        <p style="font-size: 12px; color: #666;">Please reload the page and try again</p>
+      </div>
+    `;
     return;
   }
+
+  console.log('Vinegar: Leaflet loaded successfully, version:', L.version);
 
   // Configure Leaflet icon paths to use extension resources
   L.Icon.Default.prototype.options.iconUrl = chrome.runtime.getURL('lib/images/marker-icon.png');
   L.Icon.Default.prototype.options.iconRetinaUrl = chrome.runtime.getURL('lib/images/marker-icon-2x.png');
   L.Icon.Default.prototype.options.shadowUrl = chrome.runtime.getURL('lib/images/marker-shadow.png');
+
+  console.log('Vinegar: Icon paths configured');
 
   try {
     // Create map centered on user location
