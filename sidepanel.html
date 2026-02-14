@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vinegar Side Panel</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
 </head>
 <body>
   <div id="vinegar-panel" class="vinegar-panel">
@@ -55,6 +63,22 @@
         <h3 class="vinegar-section-title">Ethical Alternatives</h3>
         <div id="alternatives-list" class="vinegar-alternatives">
           <!-- Alternatives will be dynamically inserted here -->
+        </div>
+
+        <!-- Map Toggle Button -->
+        <button id="toggle-map-btn" class="toggle-map-btn" style="display: none;">
+          <span id="map-btn-icon">🗺️</span>
+          <span id="map-btn-text">Show Nearby Alternatives</span>
+        </button>
+      </div>
+
+      <!-- Map Section -->
+      <div id="map-section" class="vinegar-section map-section" style="display: none;">
+        <h3 class="vinegar-section-title">Nearby Alternatives Map</h3>
+        <div id="alternatives-map" class="alternatives-map"></div>
+        <div id="map-no-location" class="map-no-location" style="display: none;">
+          <span class="map-icon">📍</span>
+          <p>Enable location to see map of nearby alternatives</p>
         </div>
       </div>
 

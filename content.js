@@ -7,6 +7,9 @@
 let isPanelInjected = false;
 let productData = null;
 let userLocation = null;
+let currentAlternatives = [];
+let map = null;
+let isMapVisible = false;
 
 /**
  * Detect which site we're on and extract product information
@@ -290,6 +293,7 @@ function loadAlternatives(data) {
 
     // Generate mock alternatives
     const alternatives = generateMockAlternatives(data);
+    currentAlternatives = alternatives; // Store for map use
 
     // Clear existing
     alternativesList.innerHTML = '';
@@ -306,7 +310,209 @@ function loadAlternatives(data) {
     });
 
     console.log('Vinegar: Alternatives loaded');
+
+    // Setup map button
+    setupMapButton();
   }, 1000);
+}
+
+/**
+ * Setup map toggle button
+ */
+function setupMapButton() {
+  const mapBtn = document.getElementById('toggle-map-btn');
+  if (!mapBtn) return;
+
+  // Show button if we have location and alternatives
+  if (userLocation && currentAlternatives.length > 0) {
+    mapBtn.style.display = 'flex';
+
+    // Remove old listeners
+    const newBtn = mapBtn.cloneNode(true);
+    mapBtn.parentNode.replaceChild(newBtn, mapBtn);
+
+    // Add click listener
+    newBtn.addEventListener('click', toggleMap);
+  } else {
+    mapBtn.style.display = 'none';
+  }
+}
+
+/**
+ * Toggle map visibility
+ */
+function toggleMap() {
+  const mapSection = document.getElementById('map-section');
+  const mapBtn = document.getElementById('toggle-map-btn');
+  const mapBtnText = document.getElementById('map-btn-text');
+  const mapBtnIcon = document.getElementById('map-btn-icon');
+
+  if (!mapSection || !mapBtn) return;
+
+  isMapVisible = !isMapVisible;
+
+  if (isMapVisible) {
+    // Show map
+    mapSection.style.display = 'block';
+    mapBtnText.textContent = 'Hide Map';
+    mapBtnIcon.textContent = '✖️';
+
+    // Initialize map if not already done
+    if (!map) {
+      setTimeout(() => initializeMap(), 100);
+    }
+
+    // Scroll to map
+    setTimeout(() => {
+      mapSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 150);
+  } else {
+    // Hide map
+    mapSection.style.display = 'none';
+    mapBtnText.textContent = 'Show Nearby Alternatives';
+    mapBtnIcon.textContent = '🗺️';
+  }
+}
+
+/**
+ * Initialize Leaflet map
+ */
+function initializeMap() {
+  console.log('Vinegar: Initializing map');
+
+  const mapContainer = document.getElementById('alternatives-map');
+  const noLocationDiv = document.getElementById('map-no-location');
+
+  if (!mapContainer) return;
+
+  // Check if user has location
+  if (!userLocation || !userLocation.lat || !userLocation.lon) {
+    mapContainer.style.display = 'none';
+    if (noLocationDiv) noLocationDiv.style.display = 'flex';
+    return;
+  }
+
+  // Hide no-location message
+  mapContainer.style.display = 'block';
+  if (noLocationDiv) noLocationDiv.style.display = 'none';
+
+  // Check if Leaflet is loaded
+  if (typeof L === 'undefined') {
+    console.error('Vinegar: Leaflet not loaded');
+    return;
+  }
+
+  try {
+    // Create map centered on user location
+    map = L.map('alternatives-map', {
+      zoomControl: true,
+      scrollWheelZoom: true
+    }).setView([userLocation.lat, userLocation.lon], 12);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Add user location marker (blue dot)
+    const userIcon = L.divIcon({
+      className: 'user-location-marker',
+      html: '<div style="width: 20px; height: 20px; background: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+
+    L.marker([userLocation.lat, userLocation.lon], { icon: userIcon })
+      .addTo(map)
+      .bindPopup('<div class="map-popup-title">📍 Your Location</div>');
+
+    // Add markers for alternatives
+    currentAlternatives.forEach((alt, index) => {
+      if (alt.lat && alt.lon) {
+        addAlternativeMarker(alt, index);
+      }
+    });
+
+    // Fit bounds to show all markers
+    const bounds = [
+      [userLocation.lat, userLocation.lon],
+      ...currentAlternatives
+        .filter(alt => alt.lat && alt.lon)
+        .map(alt => [alt.lat, alt.lon])
+    ];
+
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+
+    console.log('Vinegar: Map initialized successfully');
+
+  } catch (error) {
+    console.error('Vinegar: Error initializing map:', error);
+  }
+}
+
+/**
+ * Add marker for an alternative
+ */
+function addAlternativeMarker(alt, index) {
+  if (!map) return;
+
+  // Define marker colors based on type
+  const colors = {
+    local: '#2e7d32',      // Green
+    sustainable: '#00695c', // Blue-green
+    ethical: '#e65100'      // Orange
+  };
+
+  const color = colors[alt.type] || '#7ba05b';
+
+  // Create custom icon
+  const icon = L.divIcon({
+    className: 'custom-marker',
+    html: `
+      <div style="
+        width: 30px;
+        height: 30px;
+        background: ${color};
+        border: 3px solid white;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <span style="
+          transform: rotate(45deg);
+          color: white;
+          font-size: 16px;
+          font-weight: bold;
+        ">${index + 1}</span>
+      </div>
+    `,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+  });
+
+  // Create popup content
+  const popupContent = `
+    <div class="map-popup-title">${alt.name}</div>
+    <div class="map-popup-detail">
+      <span class="alt-badge ${alt.type}" style="display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; margin-top: 4px;">
+        ${alt.typeLabel}
+      </span>
+    </div>
+    <div class="map-popup-price">${alt.price}</div>
+    ${alt.distanceLabel ? `<div class="map-popup-distance">📍 ${alt.distanceLabel} away</div>` : ''}
+  `;
+
+  // Add marker
+  L.marker([alt.lat, alt.lon], { icon })
+    .addTo(map)
+    .bindPopup(popupContent);
 }
 
 /**

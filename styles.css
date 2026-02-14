@@ -469,6 +469,135 @@
   font-weight: 500;
 }
 
+/* Map Section */
+.toggle-map-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all var(--transition-normal);
+  box-shadow: 0 4px 12px rgba(123, 160, 91, 0.3);
+}
+
+.toggle-map-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(123, 160, 91, 0.4);
+}
+
+.toggle-map-btn:active {
+  transform: translateY(0);
+}
+
+#map-btn-icon {
+  font-size: 20px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.map-section {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alternatives-map {
+  width: 100%;
+  height: 400px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 2px solid var(--warm-gray);
+}
+
+.map-no-location {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  border: 2px dashed var(--warm-gray);
+  text-align: center;
+}
+
+.map-no-location .map-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.map-no-location p {
+  font-size: 14px;
+  color: var(--text-medium);
+  margin: 0;
+  max-width: 250px;
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.map-popup-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+}
+
+.map-popup-detail {
+  font-size: 12px;
+  color: var(--text-medium);
+  margin: 3px 0;
+}
+
+.map-popup-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-green);
+  margin-top: 6px;
+}
+
+.map-popup-distance {
+  font-size: 12px;
+  color: var(--primary-green);
+  font-weight: 600;
+}
+
 /* Loading State */
 .vinegar-loading {
   text-align: center;
