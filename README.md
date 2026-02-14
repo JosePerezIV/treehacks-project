@@ -74,9 +74,8 @@ Vinegar uses a cohesive earth-tone color palette:
 Configure your preferences in the extension popup:
 
 - **🏪 Support Local Businesses** - Prioritize local shops in recommendations
-- **📦 Avoid Amazon** - Show alternatives to Amazon products
-- **🍫 Avoid Nestlé** - Exclude Nestlé products from recommendations
 - **🌱 Sustainable Products** - Prioritize eco-friendly alternatives
+- **🚫 Brands to Avoid** - Add any brands or companies you want to avoid (e.g., Amazon, Nestlé, Walmart, etc.)
 
 ## Future Enhancements
 

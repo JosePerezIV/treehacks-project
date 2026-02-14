@@ -12,9 +12,8 @@ chrome.runtime.onInstalled.addListener((details) => {
     chrome.storage.sync.set({
       settings: {
         supportLocal: true,
-        avoidAmazon: true,
-        avoidNestle: true,
-        sustainableProducts: true
+        sustainableProducts: true,
+        avoidedBrands: [] // Users can add their own brands to avoid
       }
     });
 
@@ -160,9 +159,8 @@ async function getSettings() {
     const result = await chrome.storage.sync.get('settings');
     return result.settings || {
       supportLocal: true,
-      avoidAmazon: true,
-      avoidNestle: true,
-      sustainableProducts: true
+      sustainableProducts: true,
+      avoidedBrands: []
     };
   } catch (error) {
     console.error('Error getting settings:', error);

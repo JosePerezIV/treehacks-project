@@ -186,6 +186,108 @@
       color: #5d7e47;
       text-decoration: underline;
     }
+
+    /* Brands to Avoid Section */
+    .brands-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .add-brand-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .brand-input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #d4dac9;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s ease;
+    }
+
+    .brand-input:focus {
+      outline: none;
+      border-color: #7ba05b;
+    }
+
+    .add-brand-btn {
+      padding: 10px 16px;
+      background: #7ba05b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .add-brand-btn:hover {
+      background: #5d7e47;
+    }
+
+    .brands-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .brand-tag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #f5f7f0;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #2d4a2b;
+      animation: slideIn 0.2s ease;
+    }
+
+    .brand-name {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .remove-brand-btn {
+      background: none;
+      border: none;
+      color: #e74c3c;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 4px;
+      transition: transform 0.2s ease;
+    }
+
+    .remove-brand-btn:hover {
+      transform: scale(1.2);
+    }
+
+    .empty-brands {
+      text-align: center;
+      padding: 20px;
+      color: #7ba05b;
+      font-size: 13px;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
   </style>
 </head>
 <body>
@@ -214,28 +316,6 @@
 
       <div class="setting-item">
         <div class="setting-info">
-          <span class="setting-label">📦 Avoid Amazon</span>
-          <span class="setting-description">Show alternatives to Amazon</span>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-amazon" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
-          <span class="setting-label">🍫 Avoid Nestlé</span>
-          <span class="setting-description">Exclude Nestlé products</span>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-nestle" checked>
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div class="setting-item">
-        <div class="setting-info">
           <span class="setting-label">🌱 Sustainable Products</span>
           <span class="setting-description">Eco-friendly alternatives</span>
         </div>
@@ -243,6 +323,26 @@
           <input type="checkbox" id="toggle-sustainable" checked>
           <span class="toggle-slider"></span>
         </label>
+      </div>
+    </div>
+
+    <!-- Brands to Avoid Section -->
+    <div class="settings-section">
+      <h2 class="section-title">Brands to Avoid</h2>
+      <div class="brands-section">
+        <div class="add-brand-container">
+          <input
+            type="text"
+            id="brand-input"
+            class="brand-input"
+            placeholder="e.g., Amazon, Nestlé, Walmart..."
+            maxlength="50"
+          >
+          <button id="add-brand-btn" class="add-brand-btn">Add</button>
+        </div>
+        <div id="brands-list" class="brands-list">
+          <div class="empty-brands">No brands added yet. Add brands above to avoid them.</div>
+        </div>
       </div>
     </div>
 
