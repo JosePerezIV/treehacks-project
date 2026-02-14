@@ -1,0 +1,535 @@
+/**
+ * Vinegar - Cohesive Design System
+ * Earth tones: greens, warm neutrals, creams
+ */
+
+/* CSS Variables for consistent theming */
+:root {
+  --primary-green: #7ba05b;
+  --dark-green: #5d7e47;
+  --light-green: #9cb87f;
+  --primary-brown: #8b7355;
+  --dark-brown: #6d5a45;
+  --cream: #f5f3ed;
+  --light-cream: #faf9f5;
+  --warm-gray: #d4d0c8;
+  --text-dark: #2d4a2b;
+  --text-medium: #6b8e5f;
+  --text-light: #a8c29a;
+
+  --shadow-sm: 0 1px 3px rgba(45, 74, 43, 0.1);
+  --shadow-md: 0 4px 6px rgba(45, 74, 43, 0.15);
+  --shadow-lg: 0 10px 20px rgba(45, 74, 43, 0.2);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* Side Panel Container */
+#vinegar-sidepanel-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  z-index: 999999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  transition: transform var(--transition-normal);
+}
+
+#vinegar-sidepanel-container.vinegar-collapsed {
+  transform: translateX(100%);
+}
+
+#vinegar-sidepanel-container.vinegar-expanded {
+  transform: translateX(0);
+}
+
+/* Main Panel */
+.vinegar-panel {
+  position: relative;
+  width: 420px;
+  height: 100vh;
+  background: linear-gradient(135deg, var(--light-cream) 0%, var(--cream) 100%);
+  box-shadow: -4px 0 24px rgba(45, 74, 43, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Toggle Button */
+.vinegar-toggle {
+  position: absolute;
+  left: -48px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 64px;
+  background: var(--primary-green);
+  border: none;
+  border-radius: 8px 0 0 8px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+}
+
+.vinegar-toggle:hover {
+  background: var(--dark-green);
+  transform: translateY(-50%) translateX(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.vinegar-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Panel Content */
+.vinegar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-green) var(--cream);
+}
+
+.vinegar-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.vinegar-content::-webkit-scrollbar-track {
+  background: var(--cream);
+}
+
+.vinegar-content::-webkit-scrollbar-thumb {
+  background: var(--primary-green);
+  border-radius: 4px;
+}
+
+/* Header */
+.vinegar-header {
+  text-align: center;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--primary-green);
+}
+
+.vinegar-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.5px;
+}
+
+.vinegar-subtitle {
+  font-size: 14px;
+  color: var(--text-medium);
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Sections */
+.vinegar-section {
+  margin-bottom: 24px;
+  animation: fadeInUp 0.4s ease;
+}
+
+.vinegar-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+}
+
+.vinegar-section-title:before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: var(--primary-green);
+  margin-right: 8px;
+  border-radius: 2px;
+}
+
+/* Product Info */
+.vinegar-product-info {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--warm-gray);
+}
+
+.product-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.product-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-green);
+  margin-bottom: 8px;
+}
+
+.product-site {
+  font-size: 13px;
+  color: var(--text-medium);
+}
+
+.site-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--cream);
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+/* Company Info */
+.vinegar-company-info {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--warm-gray);
+}
+
+.company-badge {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--cream);
+  border-radius: 8px;
+}
+
+.badge-icon {
+  font-size: 24px;
+  margin-right: 12px;
+}
+
+.badge-text {
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+/* Ethical Score */
+.ethical-score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+.score-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--cream);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c 0%, #f39c12 50%, var(--primary-green) 100%);
+  transition: width var(--transition-slow);
+  border-radius: 4px;
+}
+
+.score-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+/* Alternatives List */
+.vinegar-alternatives {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alternative-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--warm-gray);
+  transition: all var(--transition-fast);
+  opacity: 0;
+}
+
+.alternative-card.vinegar-fade-in {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.alternative-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.alt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.alt-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.alt-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.alt-badge.local {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.alt-badge.sustainable {
+  background: #e0f2f1;
+  color: #00695c;
+}
+
+.alt-badge.ethical {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.alt-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.alt-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-green);
+}
+
+.alt-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-medium);
+}
+
+.stars {
+  font-size: 14px;
+}
+
+.alt-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.feature-tag {
+  padding: 4px 10px;
+  background: var(--cream);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text-medium);
+  font-weight: 500;
+}
+
+.alt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.alt-button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  text-align: center;
+  border: none;
+}
+
+.alt-button.primary {
+  background: var(--primary-green);
+  color: white;
+}
+
+.alt-button.primary:hover {
+  background: var(--dark-green);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.alt-button.secondary {
+  background: white;
+  color: var(--primary-green);
+  border: 2px solid var(--primary-green);
+}
+
+.alt-button.secondary:hover {
+  background: var(--light-cream);
+}
+
+/* Cost-Benefit Analysis */
+.vinegar-cost-benefit {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--warm-gray);
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cream);
+}
+
+.benefit-item:last-child {
+  border-bottom: none;
+}
+
+.benefit-icon {
+  font-size: 20px;
+  margin-right: 12px;
+}
+
+.benefit-text {
+  font-size: 14px;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+
+/* Loading State */
+.vinegar-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 16px;
+  border: 4px solid var(--cream);
+  border-top: 4px solid var(--primary-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.vinegar-loading p {
+  font-size: 14px;
+  color: var(--text-medium);
+  margin: 0;
+}
+
+/* Notifications */
+.vinegar-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  color: var(--text-dark);
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 300px;
+  z-index: 1000000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--transition-normal);
+  border-left: 4px solid var(--primary-green);
+}
+
+.vinegar-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.vinegar-slide-in {
+  animation: slideIn var(--transition-normal);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .vinegar-panel {
+    width: 100vw;
+  }
+
+  .vinegar-content {
+    padding: 16px;
+  }
+}
+
+/* Print styles */
+@media print {
+  #vinegar-sidepanel-container {
+    display: none !important;
+  }
+}

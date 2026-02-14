@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vinegar Settings</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #f5f7f0 0%, #e8ebe0 100%);
+    }
+
+    .popup-container {
+      padding: 20px;
+    }
+
+    .popup-header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #7ba05b;
+    }
+
+    .popup-logo {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+
+    .popup-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2d4a2b;
+      margin: 0 0 4px 0;
+    }
+
+    .popup-subtitle {
+      font-size: 13px;
+      color: #6b8e5f;
+      margin: 0;
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d4a2b;
+      margin: 0 0 12px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .setting-item:hover {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .setting-info {
+      flex: 1;
+    }
+
+    .setting-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #2d4a2b;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .setting-description {
+      font-size: 12px;
+      color: #7ba05b;
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      margin-left: 12px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 34px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #7ba05b;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+    }
+
+    .stats-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-item {
+      margin-bottom: 12px;
+    }
+
+    .stat-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #7ba05b;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #6b8e5f;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #d4dac9;
+      text-align: center;
+    }
+
+    .footer-link {
+      font-size: 12px;
+      color: #7ba05b;
+      text-decoration: none;
+      margin: 0 8px;
+    }
+
+    .footer-link:hover {
+      color: #5d7e47;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-logo">🍃</div>
+      <h1 class="popup-title">Vinegar</h1>
+      <p class="popup-subtitle">Ethical Shopping Assistant</p>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="settings-section">
+      <h2 class="section-title">Preferences</h2>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">🏪 Support Local Businesses</span>
+          <span class="setting-description">Prioritize local shops</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-local" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">📦 Avoid Amazon</span>
+          <span class="setting-description">Show alternatives to Amazon</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-amazon" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">🍫 Avoid Nestlé</span>
+          <span class="setting-description">Exclude Nestlé products</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-nestle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-label">🌱 Sustainable Products</span>
+          <span class="setting-description">Eco-friendly alternatives</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-sustainable" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="settings-section">
+      <h2 class="section-title">Your Impact</h2>
+      <div class="stats-section">
+        <div class="stat-item">
+          <span class="stat-value" id="stat-alternatives">12</span>
+          <span class="stat-label">Alternatives Found</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-local">$247</span>
+          <span class="stat-label">Supported Local Economy</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-co2">18 kg</span>
+          <span class="stat-label">CO₂ Saved</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <a href="#" class="footer-link" id="link-about">About</a>
+      <a href="#" class="footer-link" id="link-feedback">Feedback</a>
+      <a href="#" class="footer-link" id="link-privacy">Privacy</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
