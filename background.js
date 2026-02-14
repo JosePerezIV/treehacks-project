@@ -89,14 +89,22 @@ async function handleProductDetected(productData, sender) {
 
     // Update badge to show extension is active
     if (sender.tab?.id) {
-      chrome.action.setBadgeText({
-        text: '✓',
-        tabId: sender.tab.id
-      });
-      chrome.action.setBadgeBackgroundColor({
-        color: '#7ba05b',
-        tabId: sender.tab.id
-      });
+      try {
+        // Verify tab exists before setting badge
+        await chrome.tabs.get(sender.tab.id);
+
+        await chrome.action.setBadgeText({
+          text: '✓',
+          tabId: sender.tab.id
+        });
+        await chrome.action.setBadgeBackgroundColor({
+          color: '#7ba05b',
+          tabId: sender.tab.id
+        });
+      } catch (tabError) {
+        // Tab might have been closed or doesn't exist
+        console.log('Could not set badge for tab:', sender.tab.id, tabError.message);
+      }
     }
   } catch (error) {
     console.error('Error updating stats:', error);
@@ -189,7 +197,12 @@ async function getStats() {
  * Clear badge when tab is closed or navigated away
  */
 chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.action.setBadgeText({ text: '', tabId });
+  try {
+    chrome.action.setBadgeText({ text: '', tabId });
+  } catch (error) {
+    // Tab already removed, ignore error
+    console.log('Could not clear badge for removed tab:', tabId);
+  }
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -198,7 +211,12 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     const isSupported = supportedSites.some(site => changeInfo.url.includes(site));
 
     if (!isSupported) {
-      chrome.action.setBadgeText({ text: '', tabId });
+      try {
+        chrome.action.setBadgeText({ text: '', tabId });
+      } catch (error) {
+        // Tab might not exist, ignore error
+        console.log('Could not clear badge for tab:', tabId);
+      }
     }
   }
 });
