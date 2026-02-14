@@ -44,7 +44,16 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["sidepanel.html", "styles.css", "utils.js"],
+      "resources": [
+        "sidepanel.html",
+        "styles.css",
+        "utils.js",
+        "lib/leaflet.css",
+        "lib/leaflet.js",
+        "lib/images/marker-icon.png",
+        "lib/images/marker-icon-2x.png",
+        "lib/images/marker-shadow.png"
+      ],
       "matches": [
         "https://*.amazon.com/*",
         "https://*.walmart.com/*",

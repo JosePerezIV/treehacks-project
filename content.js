@@ -156,7 +156,32 @@ async function injectSidePanel(data) {
       console.log('Vinegar: User location loaded:', userLocation);
     }
 
-    // Inject utils.js first (for distance calculations)
+    // Inject Leaflet CSS first
+    const leafletCSS = document.createElement('link');
+    leafletCSS.rel = 'stylesheet';
+    leafletCSS.href = chrome.runtime.getURL('lib/leaflet.css');
+    document.head.appendChild(leafletCSS);
+
+    console.log('Vinegar: Leaflet CSS injected');
+
+    // Inject Leaflet JS
+    const leafletScript = document.createElement('script');
+    leafletScript.src = chrome.runtime.getURL('lib/leaflet.js');
+    document.head.appendChild(leafletScript);
+
+    await new Promise((resolve) => {
+      leafletScript.onload = () => {
+        console.log('Vinegar: Leaflet JS loaded');
+        resolve();
+      };
+      leafletScript.onerror = () => {
+        console.error('Vinegar: Failed to load Leaflet JS');
+        resolve(); // Continue anyway
+      };
+      setTimeout(resolve, 2000); // Fallback timeout
+    });
+
+    // Inject utils.js (for distance calculations)
     const utilsScript = document.createElement('script');
     utilsScript.src = chrome.runtime.getURL('utils.js');
     document.head.appendChild(utilsScript);
@@ -165,6 +190,8 @@ async function injectSidePanel(data) {
       utilsScript.onload = resolve;
       setTimeout(resolve, 100); // Fallback timeout
     });
+
+    console.log('Vinegar: Utils.js loaded');
 
     // Create container for the side panel
     const panelContainer = document.createElement('div');
@@ -401,6 +428,11 @@ function initializeMap() {
     console.error('Vinegar: Leaflet not loaded');
     return;
   }
+
+  // Configure Leaflet icon paths to use extension resources
+  L.Icon.Default.prototype.options.iconUrl = chrome.runtime.getURL('lib/images/marker-icon.png');
+  L.Icon.Default.prototype.options.iconRetinaUrl = chrome.runtime.getURL('lib/images/marker-icon-2x.png');
+  L.Icon.Default.prototype.options.shadowUrl = chrome.runtime.getURL('lib/images/marker-shadow.png');
 
   try {
     // Create map centered on user location
