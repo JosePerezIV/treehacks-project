@@ -826,11 +826,55 @@ function checkAvoidedBrands(companyData, avoidedBrands) {
 }
 
 /**
+ * Normalize string for comparison (remove accents, extra spaces, lowercase)
+ */
+function normalizeForComparison(str) {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s]/g, '') // Remove special chars except spaces
+    .trim()
+    .replace(/\s+/g, ' '); // Collapse multiple spaces
+}
+
+/**
+ * Check if two brand names match (flexible matching)
+ */
+function brandsMatch(brand1, brand2) {
+  const norm1 = normalizeForComparison(brand1);
+  const norm2 = normalizeForComparison(brand2);
+
+  // Exact match after normalization
+  if (norm1 === norm2) return true;
+
+  // One contains the other (bidirectional)
+  if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+
+  // Check first significant word (e.g., "Nestle" matches "Nestle USA")
+  const words1 = norm1.split(' ').filter(w => w.length > 2);
+  const words2 = norm2.split(' ').filter(w => w.length > 2);
+
+  for (const word1 of words1) {
+    for (const word2 of words2) {
+      if (word1 === word2 && word1.length > 3) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Calculate alignment score based on transparent criteria
  */
 function calculateAlignmentScore(companyData, userPreferences) {
   let score = 100; // Start with perfect score
   const breakdown = [];
+
+  console.log('Bramble: Calculating alignment score');
+  console.log('Bramble: Company:', companyData.parentCompany);
+  console.log('Bramble: Avoided brands:', userPreferences.avoidedBrands);
 
   // Company Size Penalty
   const companySize = companyData.companySize?.toLowerCase() || '';
@@ -864,22 +908,33 @@ function calculateAlignmentScore(companyData, userPreferences) {
     breakdown.push({ reason: 'Co-op or B-Corp structure', change: +15 });
   }
 
-  // User's Avoided Brands (HARSH PENALTY - essentially zero match)
+  // User's Avoided Brands (NUCLEAR PENALTY - essentially zero match)
   const avoidedBrands = userPreferences.avoidedBrands || [];
-  const companyName = companyData.parentCompany?.toLowerCase() || '';
+  const companyName = companyData.parentCompany || '';
 
   for (const avoidedBrand of avoidedBrands) {
-    const brandLower = avoidedBrand.toLowerCase();
-    if (companyName.includes(brandLower)) {
-      const penalty = score - 5; // Drop to 5/100 (essentially 0% values match)
+    console.log(`Bramble: Checking if "${companyName}" matches avoided brand "${avoidedBrand}"`);
+
+    // Check parent company
+    if (brandsMatch(companyName, avoidedBrand)) {
+      const penalty = score - 5;
       score = 5;
       breakdown.push({ reason: `⛔ On your avoid list: ${avoidedBrand}`, change: -penalty });
+      console.log(`Bramble: 🚨 MATCH FOUND - Setting score to 5/100`);
       break;
-    } else if (companyData.subsidiaries?.some(sub => sub.toLowerCase().includes(brandLower))) {
-      const penalty = score - 10; // Drop to 10/100 for subsidiaries
-      score = 10;
-      breakdown.push({ reason: `⛔ Parent company on avoid list: ${avoidedBrand}`, change: -penalty });
-      break;
+    }
+
+    // Check subsidiaries
+    if (companyData.subsidiaries) {
+      for (const subsidiary of companyData.subsidiaries) {
+        if (brandsMatch(subsidiary, avoidedBrand)) {
+          const penalty = score - 10;
+          score = 10;
+          breakdown.push({ reason: `⛔ Parent company on avoid list: ${avoidedBrand}`, change: -penalty });
+          console.log(`Bramble: 🚨 SUBSIDIARY MATCH - Setting score to 10/100`);
+          break;
+        }
+      }
     }
   }
 
