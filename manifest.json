@@ -14,7 +14,9 @@
     "https://*.bestbuy.com/*",
     "https://api.anthropic.com/*",
     "https://maps.googleapis.com/*",
-    "https://places.googleapis.com/*"
+    "https://places.googleapis.com/*",
+    "https://api.search.brave.com/*",
+    "https://*/*"
   ],
   "background": {
     "service_worker": "background.js"
