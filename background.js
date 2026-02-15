@@ -271,12 +271,8 @@ async function getStats() {
  * Clear badge when tab is closed or navigated away
  */
 chrome.tabs.onRemoved.addListener((tabId) => {
-  try {
-    chrome.action.setBadgeText({ text: '', tabId });
-  } catch (error) {
-    // Tab already removed, ignore error
-    console.log('Could not clear badge for removed tab:', tabId);
-  }
+  // Silently ignore - tab is already removed
+  chrome.action.setBadgeText({ text: '', tabId }).catch(() => {});
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -285,12 +281,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     const isSupported = supportedSites.some(site => changeInfo.url.includes(site));
 
     if (!isSupported) {
-      try {
-        chrome.action.setBadgeText({ text: '', tabId });
-      } catch (error) {
-        // Tab might not exist, ignore error
-        console.log('Could not clear badge for tab:', tabId);
-      }
+      // Silently ignore if tab doesn't exist
+      chrome.action.setBadgeText({ text: '', tabId }).catch(() => {});
     }
   }
 });
@@ -1096,9 +1088,9 @@ async function findSmallOnlineRetailers(productName, productCategory) {
 
     const response = await fetch(url, {
       headers: {
-        'Accept': 'application/json',
         'X-Subscription-Token': CONFIG.BRAVE_SEARCH_API_KEY
-      }
+      },
+      mode: 'cors'
     });
 
     if (!response.ok) {
