@@ -380,6 +380,43 @@ function updateCompanyAnalysis(analysis) {
        </div>`
     : '';
 
+  // Build score breakdown HTML if available
+  let breakdownHTML = '';
+  if (analysis.scoreBreakdown && analysis.scoreBreakdown.length > 0) {
+    const breakdownItems = analysis.scoreBreakdown
+      .map(item => {
+        const changeColor = item.change > 0 ? '#7ba05b' : '#e74c3c';
+        const changeSign = item.change > 0 ? '+' : '';
+        return `
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #e8ebe0;">
+            <span>${item.reason}</span>
+            <span style="color: ${changeColor}; font-weight: 600;">${changeSign}${item.change}</span>
+          </div>
+        `;
+      })
+      .join('');
+
+    breakdownHTML = `
+      <div style="margin-top: 12px;">
+        <button id="toggle-score-breakdown" style="background: none; border: none; color: #7ba05b; font-size: 12px; cursor: pointer; padding: 4px 0; text-decoration: underline;">
+          📊 How is this score calculated?
+        </button>
+        <div id="score-breakdown" style="display: none; margin-top: 8px; padding: 12px; background: #f5f7f0; border-radius: 6px;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #2d4a2b;">Score Breakdown:</div>
+          <div style="padding: 6px 0; font-size: 12px; border-bottom: 1px solid #e8ebe0;">
+            <span>Base score</span>
+            <span style="float: right; font-weight: 600;">100</span>
+          </div>
+          ${breakdownItems}
+          <div style="display: flex; justify-content: space-between; padding: 8px 0 4px 0; font-size: 14px; font-weight: 700; color: #7ba05b; border-top: 2px solid #7ba05b; margin-top: 4px;">
+            <span>Final Score</span>
+            <span>${analysis.ethicalScore}/100</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   companyInfo.innerHTML = `
     <div class="company-badge">
       <span class="badge-icon">🏢</span>
@@ -393,7 +430,21 @@ function updateCompanyAnalysis(analysis) {
       <span class="score-value" id="ethical-score-value">${analysis.ethicalScore}/100</span>
     </div>
     ${concernsHTML}
+    ${breakdownHTML}
   `;
+
+  // Add event listener for breakdown toggle
+  const toggleBtn = document.getElementById('toggle-score-breakdown');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const breakdown = document.getElementById('score-breakdown');
+      if (breakdown) {
+        const isVisible = breakdown.style.display !== 'none';
+        breakdown.style.display = isVisible ? 'none' : 'block';
+        toggleBtn.textContent = isVisible ? '📊 How is this score calculated?' : '📊 Hide score breakdown';
+      }
+    });
+  }
 }
 
 /**

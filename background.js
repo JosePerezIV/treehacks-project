@@ -367,9 +367,21 @@ async function analyzeProduct(productName, userPreferences = {}) {
     const text = data.content[0].text;
 
     // Parse JSON, stripping markdown if present
-    const analysis = parseClaudeResponse(text);
+    const companyData = parseClaudeResponse(text);
+
+    // Calculate ethical score using transparent algorithm
+    const scoreResult = calculateEthicalScore(companyData, userPreferences);
+
+    // Combine company data with calculated score
+    const analysis = {
+      ...companyData,
+      ethicalScore: scoreResult.score,
+      scoreBreakdown: scoreResult.breakdown,
+      concerns: companyData.factualConcerns || [] // Map factualConcerns to concerns for compatibility
+    };
 
     console.log('Vinegar API: Parsed analysis:', analysis);
+    console.log('Vinegar API: Ethical score:', scoreResult.score, 'Breakdown:', scoreResult.breakdown);
 
     return analysis;
 
@@ -596,35 +608,153 @@ User's preferences:
 - Brands to avoid: ${avoidedBrands.length > 0 ? avoidedBrands.join(', ') : 'None specified'}
 - Location: ${location ? `${location.display}` : 'Not provided'}
 
-Analyze this product and provide information about:
-1. The parent company that manufactures or owns this product
-2. An ethical score (0-100) based on labor practices, environmental impact, corporate ethics
-3. Key ethical concerns (if any)
-4. Product category (be specific: "Water bottles", "Coffee creamer", "Women's clothing", etc.)
-5. Types of ethical alternatives available
-6. Cost-benefit analysis explaining why choosing alternatives matters
-7. SPECIFIC store types that would sell this product locally (be practical!)
-   - For water bottles: "sporting goods store", "outdoor equipment store", "REI", "Dick's Sporting Goods"
-   - For groceries: "grocery store", "organic market", "whole foods", "trader joes"
-   - For clothing: "clothing boutique", "thrift store", "apparel shop"
-   - For coffee: "coffee roaster", "specialty coffee shop", "local cafe"
-   Think about WHERE someone would actually buy this product in person!
+Analyze this product and provide FACTUAL information (do NOT calculate an ethical score):
 
-Return ONLY valid JSON with this exact structure (no markdown, no code blocks, no explanation):
+1. Parent company that manufactures or owns this product
+2. Company size category:
+   - "mega-corp" if revenue > $100B (Amazon, Walmart, Nestlé)
+   - "large-corp" if revenue $10B-$100B (Target, Nike)
+   - "medium-corp" if revenue $1B-$10B
+   - "small-business" if revenue < $1B or unknown
+3. Ownership type: "publicly-traded", "private-equity", "family-owned", "co-op", "b-corp"
+4. FACTUAL concerns with dates/sources (be specific!):
+   - Labor: "2021 warehouse worker strike", "2019 wage theft lawsuit"
+   - Environment: "2020 EPA violation fine", "2022 plastic pollution lawsuit"
+   - Competition: "2018 FTC antitrust investigation"
+   Only include documented, verifiable concerns with approximate dates
+5. Certifications: ["B-Corp", "Fair Trade", "Carbon Neutral"] or [] if none
+6. Product category (specific)
+7. Store types that sell this product locally
+
+Return ONLY valid JSON (no markdown, no code blocks):
 {
   "parentCompany": "Company Name",
-  "ethicalScore": 0-100,
-  "concerns": ["concern1", "concern2", "concern3"],
+  "companySize": "mega-corp|large-corp|medium-corp|small-business",
+  "ownershipType": "publicly-traded|private-equity|family-owned|co-op",
+  "factualConcerns": ["concern with date", "another concern"],
+  "certifications": [],
   "productCategory": "specific category",
-  "alternativeTypes": ["Local businesses", "Sustainable brands", "Fair trade options"],
-  "costBenefitAnalysis": "A persuasive 2-3 sentence explanation of why choosing ethical alternatives for this product matters, focusing on real-world impact.",
-  "suggestedStoreTypes": ["specific store type 1", "specific store type 2", "specific store type 3"],
-  "suggestedStoreNames": ["common chain 1", "common chain 2"],
-  "googlePlacesTypes": ["store", "sporting_goods_store", "clothing_store"]
+  "subsidiaries": ["other brands owned by parent"],
+  "costBenefitAnalysis": "Why ethical alternatives matter for this product.",
+  "suggestedStoreTypes": ["specific store type"],
+  "suggestedStoreNames": ["chain name"],
+  "googlePlacesTypes": ["store"]
 }
 
-Important: Be SPECIFIC about store types. Think about where a person would physically go to buy this product!
+Important: Provide FACTS only. No subjective opinions. The ethical score will be calculated algorithmically.
 Return ONLY the JSON object, no other text.`;
+}
+
+/**
+ * Calculate ethical score based on transparent criteria
+ */
+function calculateEthicalScore(companyData, userPreferences) {
+  let score = 100; // Start with perfect score
+  const breakdown = [];
+
+  // Company Size Penalty
+  const companySize = companyData.companySize?.toLowerCase() || '';
+  if (companySize.includes('mega') || companySize.includes('>100b')) {
+    score -= 15;
+    breakdown.push({ reason: 'Mega-corporation (>$100B revenue)', change: -15 });
+  } else if (companySize.includes('large') || companySize.includes('10b-100b')) {
+    score -= 10;
+    breakdown.push({ reason: 'Large corporation ($10B-$100B)', change: -10 });
+  } else if (companySize.includes('medium') || companySize.includes('1b-10b')) {
+    score -= 5;
+    breakdown.push({ reason: 'Medium corporation ($1B-$10B)', change: -5 });
+  } else if (companySize.includes('small') || companySize.includes('<1b')) {
+    score += 10;
+    breakdown.push({ reason: 'Small business (<$1B)', change: +10 });
+  }
+
+  // Ownership Structure
+  const ownership = companyData.ownershipType?.toLowerCase() || '';
+  if (ownership.includes('publicly-traded') && companySize.includes('mega')) {
+    score -= 10;
+    breakdown.push({ reason: 'Publicly traded mega-corp', change: -10 });
+  } else if (ownership.includes('private equity')) {
+    score -= 5;
+    breakdown.push({ reason: 'Private equity owned', change: -5 });
+  } else if (ownership.includes('family')) {
+    score += 10;
+    breakdown.push({ reason: 'Family-owned business', change: +10 });
+  } else if (ownership.includes('co-op') || ownership.includes('b-corp')) {
+    score += 15;
+    breakdown.push({ reason: 'Co-op or B-Corp structure', change: +15 });
+  }
+
+  // User's Avoided Brands
+  const avoidedBrands = userPreferences.avoidedBrands || [];
+  const companyName = companyData.parentCompany?.toLowerCase() || '';
+
+  for (const avoidedBrand of avoidedBrands) {
+    const brandLower = avoidedBrand.toLowerCase();
+    if (companyName.includes(brandLower)) {
+      score -= 30;
+      breakdown.push({ reason: `On your avoid list: ${avoidedBrand}`, change: -30 });
+      break;
+    } else if (companyData.subsidiaries?.some(sub => sub.toLowerCase().includes(brandLower))) {
+      score -= 25;
+      breakdown.push({ reason: `Parent company on avoid list: ${avoidedBrand}`, change: -25 });
+      break;
+    }
+  }
+
+  // Documented Issues
+  const concerns = companyData.factualConcerns || [];
+  let laborIssues = 0, envIssues = 0, antiCompetitive = 0, political = 0;
+
+  for (const concern of concerns) {
+    const concernLower = concern.toLowerCase();
+    if ((concernLower.includes('labor') || concernLower.includes('worker') || concernLower.includes('wage')) && laborIssues === 0) {
+      score -= 10;
+      laborIssues = 1;
+      breakdown.push({ reason: 'Documented labor concerns', change: -10 });
+    }
+    if ((concernLower.includes('environment') || concernLower.includes('pollution') || concernLower.includes('climate')) && envIssues === 0) {
+      score -= 10;
+      envIssues = 1;
+      breakdown.push({ reason: 'Environmental violations', change: -10 });
+    }
+    if ((concernLower.includes('monopoly') || concernLower.includes('anti-competitive') || concernLower.includes('antitrust')) && antiCompetitive === 0) {
+      score -= 5;
+      antiCompetitive = 1;
+      breakdown.push({ reason: 'Anti-competitive practices', change: -5 });
+    }
+    if ((concernLower.includes('political') || concernLower.includes('lobbying') || concernLower.includes('controversy')) && political === 0) {
+      score -= 5;
+      political = 1;
+      breakdown.push({ reason: 'Political controversies', change: -5 });
+    }
+  }
+
+  // Certifications (bonus points)
+  const certifications = companyData.certifications || [];
+  for (const cert of certifications) {
+    const certLower = cert.toLowerCase();
+    if (certLower.includes('b-corp') || certLower.includes('b corp')) {
+      score += 15;
+      breakdown.push({ reason: 'B-Corp certified', change: +15 });
+    } else if (certLower.includes('fair trade')) {
+      score += 10;
+      breakdown.push({ reason: 'Fair Trade certified', change: +10 });
+    } else if (certLower.includes('carbon neutral') || certLower.includes('carbon-neutral')) {
+      score += 5;
+      breakdown.push({ reason: 'Carbon neutral commitment', change: +5 });
+    } else if (certLower.includes('living wage')) {
+      score += 10;
+      breakdown.push({ reason: 'Living wage employer', change: +10 });
+    }
+  }
+
+  // Clamp score between 0 and 100
+  const finalScore = Math.max(0, Math.min(100, score));
+
+  return {
+    score: finalScore,
+    breakdown: breakdown
+  };
 }
 
 /**
@@ -647,17 +777,21 @@ function parseClaudeResponse(text) {
     const parsed = JSON.parse(cleanText);
 
     // Validate required fields
-    if (!parsed.parentCompany || typeof parsed.ethicalScore !== 'number') {
-      throw new Error('Invalid response structure');
+    if (!parsed.parentCompany) {
+      throw new Error('Invalid response structure - missing parentCompany');
     }
 
     // Ensure arrays exist
-    parsed.concerns = parsed.concerns || [];
-    parsed.alternativeTypes = parsed.alternativeTypes || [];
-    parsed.suggestedStoreKeywords = parsed.suggestedStoreKeywords || [];
+    parsed.factualConcerns = parsed.factualConcerns || [];
+    parsed.certifications = parsed.certifications || [];
+    parsed.subsidiaries = parsed.subsidiaries || [];
+    parsed.suggestedStoreTypes = parsed.suggestedStoreTypes || [];
+    parsed.suggestedStoreNames = parsed.suggestedStoreNames || [];
+    parsed.googlePlacesTypes = parsed.googlePlacesTypes || [];
 
-    // Clamp ethical score to 0-100
-    parsed.ethicalScore = Math.max(0, Math.min(100, parsed.ethicalScore));
+    // Set defaults for company data
+    parsed.companySize = parsed.companySize || 'unknown';
+    parsed.ownershipType = parsed.ownershipType || 'unknown';
 
     return parsed;
 
