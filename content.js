@@ -853,6 +853,19 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
 
   console.log('Vinegar: Displayed', allAlternatives.length, 'alternatives (', localAlternatives.length, 'local,', onlineCount, 'online)');
 
+  // Add transparency note
+  if (allAlternatives.length > 0) {
+    const transparencyNote = document.createElement('div');
+    transparencyNote.style.cssText = 'padding: 12px; background: #f5f7f0; border-radius: 8px; margin-top: 16px; font-size: 11px; color: #6b8e5f; line-height: 1.5;';
+    transparencyNote.innerHTML = `
+      <div style="font-weight: 600; margin-bottom: 4px;">ℹ️ About These Alternatives</div>
+      <div><strong>Local stores:</strong> Real businesses from Google Places. Call to confirm product availability.</div>
+      <div><strong>Online retailers:</strong> Found via web search. Prices scraped when possible, otherwise check their website.</div>
+      <div><strong>What's filtered out:</strong> Amazon, Walmart, Target, Best Buy, and other mega-corporations.</div>
+    `;
+    alternativesList.appendChild(transparencyNote);
+  }
+
   // Track impact stats
   const closestDistance = localAlternatives.length > 0 ? localAlternatives[0].distance : null;
   updateImpactStats(productData?.price, allAlternatives.length, closestDistance);
@@ -1179,18 +1192,27 @@ function createAlternativeCard(alt) {
     distanceBadge = `<span class="distance-badge ${badgeClass}">📍 ${alt.distanceLabel}</span>`;
   }
 
-  // For real local stores (from Google Places)
-  if (alt.isReal) {
+  // Determine if this is a local store vs online retailer
+  const isLocalStore = alt.source === 'Google Places' || (alt.lat && alt.lon && alt.address);
+  const isOnlineRetailer = alt.source === 'Web Search' || alt.url;
+
+  if (isLocalStore) {
+    // LOCAL INDEPENDENT STORE
     // Safeguard against "undefined" text
     const address = (alt.address && alt.address !== 'undefined' && alt.address !== 'null') ? alt.address : null;
+    const phone = alt.phone || null;
 
     card.innerHTML = `
       <div class="alt-header">
         <h4 class="alt-name">${alt.name}</h4>
-        <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
+        <span class="alt-badge local">LOCAL BUSINESS</span>
       </div>
       ${address ? `<div class="alt-address" style="font-size: 12px; color: #666; margin: 4px 0;">${address}</div>` : ''}
+      ${phone ? `<div style="font-size: 12px; color: #7ba05b; margin: 4px 0;">📞 ${phone}</div>` : ''}
       ${alt.distanceLabel && alt.travelTimeLabel ? `<div style="font-size: 11px; color: #7ba05b; margin: 6px 0; font-weight: 500;">📍 ${alt.distanceLabel} • ${alt.travelTimeLabel} drive</div>` : distanceBadge || ''}
+      <div style="padding: 8px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 12px; color: #856404; margin: 8px 0;">
+        ⚠️ Call to confirm they carry this item
+      </div>
       <div class="alt-details">
         <div class="alt-rating">
           <span class="stars">${stars}</span>
@@ -1198,14 +1220,33 @@ function createAlternativeCard(alt) {
         </div>
       </div>
       <div class="alt-actions" style="gap: 8px;">
-        <a href="${alt.googleMapsUrl}" target="_blank" class="alt-button primary" style="flex: 1;">
+        ${phone ? `<a href="tel:${phone}" class="alt-button primary" style="flex: 1;">📞 Call Store</a>` : ''}
+        <a href="${alt.googleMapsUrl}" target="_blank" class="alt-button ${phone ? 'secondary' : 'primary'}" style="flex: 1;">
           🗺️ Directions
         </a>
-        <button class="alt-button secondary" style="flex: 0; padding: 0 12px;">💾</button>
+      </div>
+    `;
+  } else if (isOnlineRetailer) {
+    // SMALL ONLINE RETAILER
+    const priceDisplay = alt.priceDisplay || alt.price || 'Visit site for pricing';
+    const showPrice = alt.price && alt.price !== 'null' && alt.price !== 'undefined';
+
+    card.innerHTML = `
+      <div class="alt-header">
+        <h4 class="alt-name">${alt.name}</h4>
+        <span class="alt-badge small-business">SMALL BUSINESS</span>
+      </div>
+      ${alt.description ? `<div style="font-size: 12px; color: #666; margin: 4px 0; line-height: 1.4;">${alt.description}</div>` : ''}
+      <div class="alt-details" style="margin-top: 8px;">
+        ${showPrice ? `<div class="alt-price" style="font-size: 18px; font-weight: 700; color: #2d4a2b;">${alt.price}</div>` : `<div style="font-size: 13px; color: #7ba05b;">💰 ${priceDisplay}</div>`}
+        <div style="font-size: 12px; color: #6b8e5f; margin-top: 4px;">✓ ${alt.availability || 'Check website'}</div>
+      </div>
+      <div class="alt-actions" style="margin-top: 12px;">
+        <a href="${alt.url}" target="_blank" class="alt-button primary">🛒 Visit Website</a>
       </div>
     `;
   } else {
-    // For online alternatives (mock or sustainable options)
+    // FALLBACK: Generic alternative (shouldn't happen with new system)
     card.innerHTML = `
       <div class="alt-header">
         <h4 class="alt-name">${alt.name}</h4>
@@ -1218,13 +1259,11 @@ function createAlternativeCard(alt) {
           <span class="rating-value">${alt.rating}/5</span>
         </div>
       </div>
-      ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
       ${alt.features ? `<div class="alt-features">
         ${alt.features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
       </div>` : ''}
       <div class="alt-actions">
-        <a href="${alt.url}" target="_blank" class="alt-button primary">Visit Store</a>
-        <button class="alt-button secondary">Save</button>
+        <a href="${alt.url || '#'}" target="_blank" class="alt-button primary">Visit Store</a>
       </div>
     `;
   }

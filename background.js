@@ -67,23 +67,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log('Vinegar: Analysis successful');
 
         // Step 2: Find real local alternatives using Google Places
+        let localAlternatives = [];
         try {
-          const localAlternatives = await findLocalAlternatives(
+          localAlternatives = await findLocalAlternatives(
             analysis.productCategory,
             request.userPreferences.location,
             analysis,
             request.currentSite // Pass current site to exclude it
           );
-
-          // Add local alternatives to the response
-          analysis.localAlternatives = localAlternatives;
           console.log('Vinegar: Found', localAlternatives.length, 'local alternatives');
         } catch (placesError) {
           console.error('Vinegar: Google Places error:', placesError);
-          analysis.localAlternatives = [];
         }
 
-        console.log('Vinegar: Sending complete response');
+        // Step 3: Find small online retailers using web search
+        let onlineAlternatives = [];
+        try {
+          onlineAlternatives = await findSmallOnlineRetailers(
+            request.productName,
+            analysis.productCategory
+          );
+          console.log('Vinegar: Found', onlineAlternatives.length, 'online alternatives');
+        } catch (searchError) {
+          console.error('Vinegar: Web search error:', searchError);
+        }
+
+        // Combine alternatives: local first, then online
+        analysis.localAlternatives = [...localAlternatives, ...onlineAlternatives];
+
+        console.log('Vinegar: Sending complete response with', analysis.localAlternatives.length, 'total alternatives');
         sendResponse(analysis);
       })
       .catch(error => {
@@ -1062,4 +1074,197 @@ function validateAndCleanData(data) {
   }
 
   return data;
+}
+
+/**
+ * Find small online retailers using Google Custom Search
+ */
+async function findSmallOnlineRetailers(productName, productCategory) {
+  console.log('Searching for small online retailers:', productName);
+
+  // Check if we have search API configured
+  if (!CONFIG.GOOGLE_SEARCH_API_KEY || CONFIG.GOOGLE_SEARCH_ENGINE_ID === 'YOUR_SEARCH_ENGINE_ID') {
+    console.log('Google Custom Search not configured, skipping online retailer search');
+    return [];
+  }
+
+  try {
+    // Build search query to exclude mega-corps
+    const searchQuery = `${productName} buy online -amazon -walmart -target -ebay -alibaba -aliexpress`;
+
+    const url = `https://www.googleapis.com/customsearch/v1?key=${CONFIG.GOOGLE_SEARCH_API_KEY}&cx=${CONFIG.GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&num=10`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error('Google Search API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+
+    if (!data.items || data.items.length === 0) {
+      console.log('No online retailers found');
+      return [];
+    }
+
+    // Filter and process results
+    const alternatives = [];
+
+    for (const item of data.items.slice(0, 5)) { // Limit to 5
+      const domain = new URL(item.link).hostname;
+
+      // Skip mega-corps
+      if (isMegaCorp(domain)) {
+        console.log('Filtered out mega-corp:', domain);
+        continue;
+      }
+
+      // Extract business name from title (usually "Product - Store Name")
+      const businessName = extractBusinessName(item.title, domain);
+
+      // Try to scrape price
+      const price = await scrapePriceFromPage(item.link);
+
+      alternatives.push({
+        name: businessName,
+        type: 'small-business',
+        typeLabel: 'Small Business',
+        url: item.link,
+        description: item.snippet,
+        price: price,
+        priceDisplay: price || 'Visit site for pricing',
+        rating: 4.5, // Default (we don't have real ratings from search)
+        availability: 'Check website',
+        source: 'Web Search',
+        isReal: true,
+        actions: [
+          { type: 'visit', label: '🛒 Visit Website', url: item.link }
+        ]
+      });
+    }
+
+    console.log('Found', alternatives.length, 'small online retailers');
+    return alternatives;
+
+  } catch (error) {
+    console.error('Error finding online retailers:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract business name from search result title
+ */
+function extractBusinessName(title, domain) {
+  // Try to extract brand/store name from title
+  // Common patterns: "Product - Store Name", "Store Name: Product", "Product | Store"
+
+  const separators = [' - ', ' | ', ': ', ' : '];
+  for (const sep of separators) {
+    if (title.includes(sep)) {
+      const parts = title.split(sep);
+      // Last part usually has store name
+      return parts[parts.length - 1].trim();
+    }
+  }
+
+  // Fallback: use domain name
+  return domain.replace('www.', '').replace('.com', '').split('.')[0]
+    .split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+/**
+ * Check if domain is a mega-corporation
+ */
+function isMegaCorp(domain) {
+  const MEGA_CORP_DOMAINS = [
+    'amazon', 'walmart', 'target', 'bestbuy', 'ebay',
+    'alibaba', 'aliexpress', 'wish', 'macys', 'kohls',
+    'jcpenney', 'sears', 'costco', 'samsclub', 'bjs',
+    'homedepot', 'lowes', 'staples', 'officedepot',
+    'petsmart', 'petco', 'cvs', 'walgreens', 'riteaid'
+  ];
+
+  const domainLower = domain.toLowerCase();
+  return MEGA_CORP_DOMAINS.some(mega => domainLower.includes(mega));
+}
+
+/**
+ * Scrape price from a webpage
+ */
+async function scrapePriceFromPage(url) {
+  try {
+    // Set timeout for fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; VinegarBot/1.0)'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const html = await response.text();
+
+    // Method 1: Look for JSON-LD structured data (most reliable)
+    const jsonLdMatches = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/gs);
+    if (jsonLdMatches) {
+      for (const match of jsonLdMatches) {
+        try {
+          const jsonStr = match.replace(/<script[^>]*>/, '').replace(/<\/script>/, '');
+          const data = JSON.parse(jsonStr);
+
+          // Check for Product schema
+          if (data['@type'] === 'Product' && data.offers) {
+            const price = data.offers.price || data.offers[0]?.price;
+            if (price) {
+              return `$${parseFloat(price).toFixed(2)}`;
+            }
+          }
+        } catch (e) {
+          // JSON parse error, continue
+        }
+      }
+    }
+
+    // Method 2: Look for common price patterns in HTML
+    const pricePatterns = [
+      /\$(\d{1,4}(?:,\d{3})*(?:\.\d{2}))/g,           // $99.99 or $1,299.99
+      /"price":\s*"?(\d+\.?\d*)"?/,                   // JSON: "price":"99.99"
+      /itemprop="price"[^>]*content="(\d+\.?\d*)"/,   // Microdata
+      /property="product:price:amount"[^>]*content="(\d+\.?\d*)"/, // Open Graph
+    ];
+
+    for (const pattern of pricePatterns) {
+      const match = html.match(pattern);
+      if (match) {
+        const priceStr = match[1].replace(/,/g, '');
+        const price = parseFloat(priceStr);
+
+        // Sanity check: price should be between $10 and $10,000
+        if (price >= 10 && price <= 10000) {
+          return `$${price.toFixed(2)}`;
+        }
+      }
+    }
+
+    console.log('Could not scrape price from:', url);
+    return null;
+
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log('Price scraping timed out for:', url);
+    } else {
+      console.log('Price scraping failed for:', url, error.message);
+    }
+    return null;
+  }
 }
