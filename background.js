@@ -1077,14 +1077,14 @@ function validateAndCleanData(data) {
 }
 
 /**
- * Find small online retailers using Google Custom Search
+ * Find small online retailers using Bing Web Search API
  */
 async function findSmallOnlineRetailers(productName, productCategory) {
   console.log('Searching for small online retailers:', productName);
 
   // Check if we have search API configured
-  if (!CONFIG.GOOGLE_SEARCH_API_KEY || CONFIG.GOOGLE_SEARCH_ENGINE_ID === 'YOUR_SEARCH_ENGINE_ID') {
-    console.log('Google Custom Search not configured, skipping online retailer search');
+  if (!CONFIG.BING_SEARCH_API_KEY || CONFIG.BING_SEARCH_API_KEY === 'YOUR_BING_SEARCH_API_KEY') {
+    console.log('Bing Search not configured, skipping online retailer search');
     return [];
   }
 
@@ -1092,18 +1092,22 @@ async function findSmallOnlineRetailers(productName, productCategory) {
     // Build search query to exclude mega-corps
     const searchQuery = `${productName} buy online -amazon -walmart -target -ebay -alibaba -aliexpress`;
 
-    const url = `https://www.googleapis.com/customsearch/v1?key=${CONFIG.GOOGLE_SEARCH_API_KEY}&cx=${CONFIG.GOOGLE_SEARCH_ENGINE_ID}&q=${encodeURIComponent(searchQuery)}&num=10`;
+    const url = `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(searchQuery)}&count=10&mkt=en-US`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'Ocp-Apim-Subscription-Key': CONFIG.BING_SEARCH_API_KEY
+      }
+    });
 
     if (!response.ok) {
-      console.error('Google Search API error:', response.status);
+      console.error('Bing Search API error:', response.status);
       return [];
     }
 
     const data = await response.json();
 
-    if (!data.items || data.items.length === 0) {
+    if (!data.webPages || !data.webPages.value || data.webPages.value.length === 0) {
       console.log('No online retailers found');
       return [];
     }
@@ -1111,8 +1115,8 @@ async function findSmallOnlineRetailers(productName, productCategory) {
     // Filter and process results
     const alternatives = [];
 
-    for (const item of data.items.slice(0, 5)) { // Limit to 5
-      const domain = new URL(item.link).hostname;
+    for (const item of data.webPages.value.slice(0, 5)) { // Limit to 5
+      const domain = new URL(item.url).hostname;
 
       // Skip mega-corps
       if (isMegaCorp(domain)) {
@@ -1121,16 +1125,16 @@ async function findSmallOnlineRetailers(productName, productCategory) {
       }
 
       // Extract business name from title (usually "Product - Store Name")
-      const businessName = extractBusinessName(item.title, domain);
+      const businessName = extractBusinessName(item.name, domain);
 
       // Try to scrape price
-      const price = await scrapePriceFromPage(item.link);
+      const price = await scrapePriceFromPage(item.url);
 
       alternatives.push({
         name: businessName,
         type: 'small-business',
         typeLabel: 'Small Business',
-        url: item.link,
+        url: item.url,
         description: item.snippet,
         price: price,
         priceDisplay: price || 'Visit site for pricing',
@@ -1139,7 +1143,7 @@ async function findSmallOnlineRetailers(productName, productCategory) {
         source: 'Web Search',
         isReal: true,
         actions: [
-          { type: 'visit', label: '🛒 Visit Website', url: item.link }
+          { type: 'visit', label: '🛒 Visit Website', url: item.url }
         ]
       });
     }
