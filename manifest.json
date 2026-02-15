@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Vinegar",
   "version": "1.0.0",
-  "description": "Shop ethically by identifying mega-corporations and discovering local, sustainable alternatives.",
+  "description": "Shop aligned with your values by understanding companies and discovering local alternatives.",
   "permissions": [
     "storage",
     "activeTab"

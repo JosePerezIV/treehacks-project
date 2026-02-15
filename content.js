@@ -1,6 +1,6 @@
 /**
  * Vinegar Content Script
- * Detects product pages and injects ethical shopping side panel
+ * Detects product pages and provides shopping insights and alternatives
  */
 
 // Track if panel is already injected
@@ -371,9 +371,10 @@ function updateCompanyAnalysis(analysis) {
 
   const concernsHTML = analysis.concerns && analysis.concerns.length > 0
     ? `<div style="margin-top: 12px;">
+         <div style="font-size: 12px; font-weight: 600; color: #6b8e5f; margin-bottom: 6px;">📋 Company Practices:</div>
          ${analysis.concerns.map(concern => `
-           <div style="display: flex; align-items: center; gap: 6px; padding: 6px 0; font-size: 12px; color: #e74c3c;">
-             <span>⚠️</span>
+           <div style="display: flex; align-items: center; gap: 6px; padding: 6px 0 6px 18px; font-size: 12px; color: #666;">
+             <span>•</span>
              <span>${concern}</span>
            </div>
          `).join('')}
@@ -410,7 +411,7 @@ function updateCompanyAnalysis(analysis) {
           ${breakdownItems}
           <div style="display: flex; justify-content: space-between; padding: 8px 0 4px 0; font-size: 14px; font-weight: 700; color: #7ba05b; border-top: 2px solid #7ba05b; margin-top: 4px;">
             <span>Final Score</span>
-            <span>${analysis.ethicalScore}/100</span>
+            <span>${analysis.alignmentScore}/100</span>
           </div>
         </div>
       </div>
@@ -422,12 +423,12 @@ function updateCompanyAnalysis(analysis) {
       <span class="badge-icon">🏢</span>
       <span class="badge-text">Parent Company: <strong id="parent-company">${analysis.parentCompany}</strong></span>
     </div>
-    <div class="ethical-score">
-      <span class="score-label">Ethical Score:</span>
+    <div class="alignment-score">
+      <span class="score-label">Values Match:</span>
       <div class="score-bar">
-        <div class="score-fill" id="ethical-score-fill" style="width: ${analysis.ethicalScore}%"></div>
+        <div class="score-fill" id="alignment-score-fill" style="width: ${analysis.alignmentScore}%"></div>
       </div>
-      <span class="score-value" id="ethical-score-value">${analysis.ethicalScore}/100</span>
+      <span class="score-value" id="alignment-score-value">${analysis.alignmentScore}/100</span>
     </div>
     ${concernsHTML}
     ${breakdownHTML}
@@ -456,16 +457,16 @@ function updateCostBenefitAnalysis(analysisText) {
 
   costBenefit.innerHTML = `
     <div class="benefit-item">
-      <span class="benefit-icon">🤖</span>
-      <span class="benefit-text" style="font-style: italic;">${analysisText}</span>
+      <span class="benefit-icon">💡</span>
+      <span class="benefit-text">${analysisText}</span>
     </div>
     <div class="benefit-item">
       <span class="benefit-icon">💰</span>
-      <span class="benefit-text">Support local economy</span>
+      <span class="benefit-text">Supports local economy</span>
     </div>
     <div class="benefit-item">
       <span class="benefit-icon">🌱</span>
-      <span class="benefit-text">Reduced carbon footprint</span>
+      <span class="benefit-text">Often reduces shipping distance</span>
     </div>
     <div class="benefit-item">
       <span class="benefit-icon">🤝</span>

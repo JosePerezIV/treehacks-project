@@ -369,19 +369,19 @@ async function analyzeProduct(productName, userPreferences = {}) {
     // Parse JSON, stripping markdown if present
     const companyData = parseClaudeResponse(text);
 
-    // Calculate ethical score using transparent algorithm
-    const scoreResult = calculateEthicalScore(companyData, userPreferences);
+    // Calculate alignment score using transparent algorithm
+    const scoreResult = calculateAlignmentScore(companyData, userPreferences);
 
     // Combine company data with calculated score
     const analysis = {
       ...companyData,
-      ethicalScore: scoreResult.score,
+      alignmentScore: scoreResult.score,
       scoreBreakdown: scoreResult.breakdown,
       concerns: companyData.factualConcerns || [] // Map factualConcerns to concerns for compatibility
     };
 
     console.log('Vinegar API: Parsed analysis:', analysis);
-    console.log('Vinegar API: Ethical score:', scoreResult.score, 'Breakdown:', scoreResult.breakdown);
+    console.log('Vinegar API: Alignment score:', scoreResult.score, 'Breakdown:', scoreResult.breakdown);
 
     return analysis;
 
@@ -608,7 +608,7 @@ User's preferences:
 - Brands to avoid: ${avoidedBrands.length > 0 ? avoidedBrands.join(', ') : 'None specified'}
 - Location: ${location ? `${location.display}` : 'Not provided'}
 
-Analyze this product and provide FACTUAL information (do NOT calculate an ethical score):
+Analyze this product and provide FACTUAL information (do NOT calculate a score):
 
 1. Parent company that manufactures or owns this product
 2. Company size category:
@@ -617,38 +617,42 @@ Analyze this product and provide FACTUAL information (do NOT calculate an ethica
    - "medium-corp" if revenue $1B-$10B
    - "small-business" if revenue < $1B or unknown
 3. Ownership type: "publicly-traded", "private-equity", "family-owned", "co-op", "b-corp"
-4. FACTUAL concerns with dates/sources (be specific!):
+4. FACTUAL company practices with dates/sources (be specific and neutral!):
    - Labor: "2021 warehouse worker strike", "2019 wage theft lawsuit"
    - Environment: "2020 EPA violation fine", "2022 plastic pollution lawsuit"
    - Competition: "2018 FTC antitrust investigation"
-   Only include documented, verifiable concerns with approximate dates
+   Only include documented, verifiable information with approximate dates
 5. Certifications: ["B-Corp", "Fair Trade", "Carbon Neutral"] or [] if none
 6. Product category (specific)
 7. Store types that sell this product locally
+8. Brief, factual explanation of why someone might consider alternatives for this type of product
+   - Focus on FACTS and IMPACT, not moral judgments
+   - Example: "Supporting local businesses generates 3x more local economic activity"
+   - Example: "Small businesses account for 65% of new jobs in this sector"
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
   "parentCompany": "Company Name",
   "companySize": "mega-corp|large-corp|medium-corp|small-business",
   "ownershipType": "publicly-traded|private-equity|family-owned|co-op",
-  "factualConcerns": ["concern with date", "another concern"],
+  "factualConcerns": ["factual practice with date", "another practice"],
   "certifications": [],
   "productCategory": "specific category",
   "subsidiaries": ["other brands owned by parent"],
-  "costBenefitAnalysis": "Why ethical alternatives matter for this product.",
+  "impactExplanation": "Factual, empowering explanation of choosing alternatives (2-3 sentences).",
   "suggestedStoreTypes": ["specific store type"],
   "suggestedStoreNames": ["chain name"],
   "googlePlacesTypes": ["store"]
 }
 
-Important: Provide FACTS only. No subjective opinions. The ethical score will be calculated algorithmically.
+Important: Provide FACTS only. Be neutral and informative, not preachy. The alignment score will be calculated algorithmically.
 Return ONLY the JSON object, no other text.`;
 }
 
 /**
- * Calculate ethical score based on transparent criteria
+ * Calculate alignment score based on transparent criteria
  */
-function calculateEthicalScore(companyData, userPreferences) {
+function calculateAlignmentScore(companyData, userPreferences) {
   let score = 100; // Start with perfect score
   const breakdown = [];
 
