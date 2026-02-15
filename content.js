@@ -550,13 +550,19 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
   const alternativesList = document.getElementById('alternatives-list');
   if (!alternativesList) return;
 
-  // Calculate distances for local alternatives
+  // Calculate distances and travel times for local alternatives
   if (userLocation && typeof calculateDistance === 'function') {
     localAlternatives.forEach(alt => {
       alt.distance = calculateDistance(userLocation.lat, userLocation.lon, alt.lat, alt.lon);
       alt.distanceLabel = formatDistance(alt.distance);
       alt.distanceCategory = categorizeDistance(alt.distance);
       alt.distanceBonus = getDistanceBonus(alt.distance);
+
+      // Estimate travel time (assuming 25 mph average in city, 35 mph suburban)
+      const avgSpeed = alt.distance < 5 ? 25 : 35; // mph
+      const travelTimeMinutes = Math.round((alt.distance / avgSpeed) * 60);
+      alt.travelTime = travelTimeMinutes;
+      alt.travelTimeLabel = travelTimeMinutes < 60 ? `${travelTimeMinutes} min` : `${Math.round(travelTimeMinutes / 60)} hr`;
     });
 
     // Sort by distance (closest first)
@@ -963,14 +969,14 @@ function createAlternativeCard(alt) {
         <h4 class="alt-name">${alt.name}</h4>
         <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
       </div>
-      ${alt.address ? `<div class="alt-address" style="font-size: 12px; color: var(--text-medium); margin: 8px 0;">${alt.address}</div>` : ''}
+      ${alt.address ? `<div class="alt-address" style="font-size: 12px; color: #666; margin: 4px 0;">${alt.address}</div>` : ''}
+      ${alt.distanceLabel && alt.travelTimeLabel ? `<div style="font-size: 11px; color: #7ba05b; margin: 6px 0; font-weight: 500;">📍 ${alt.distanceLabel} • ${alt.travelTimeLabel} drive</div>` : distanceBadge || ''}
       <div class="alt-details">
         <div class="alt-rating">
           <span class="stars">${stars}</span>
           <span class="rating-value">${alt.rating.toFixed(1)}/5</span>
         </div>
       </div>
-      ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
       <div class="alt-actions" style="gap: 8px;">
         <a href="${alt.googleMapsUrl}" target="_blank" class="alt-button primary" style="flex: 1;">
           🗺️ Directions
