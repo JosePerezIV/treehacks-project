@@ -388,7 +388,7 @@ async function analyzeProduct(productName, userPreferences = {}) {
 }
 
 /**
- * Find real local alternatives using Google Places API
+ * Find real local alternatives using Google Places API (New)
  */
 async function findLocalAlternatives(productCategory, userLocation, keywords) {
   console.log('Finding local alternatives:', { productCategory, userLocation, keywords });
@@ -407,47 +407,67 @@ async function findLocalAlternatives(productCategory, userLocation, keywords) {
     const alternatives = [];
 
     // Try searching with each keyword
-    for (const keyword of keywords.slice(0, 3)) { // Limit to first 3 keywords
+    for (const keyword of keywords.slice(0, 2)) { // Limit to first 2 keywords
       const searchQuery = `${keyword} ${productCategory}`;
       console.log('Searching Google Places for:', searchQuery);
 
-      const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-      url.searchParams.append('location', `${userLocation.lat},${userLocation.lon}`);
-      url.searchParams.append('radius', '8000'); // 5 miles in meters
-      url.searchParams.append('keyword', searchQuery);
-      url.searchParams.append('type', 'store');
-      url.searchParams.append('key', CONFIG.GOOGLE_PLACES_API_KEY);
+      // Use new Places API (New) with searchNearby
+      const url = 'https://places.googleapis.com/v1/places:searchNearby';
 
-      console.log('Google Places URL:', url.toString());
+      const requestBody = {
+        includedTypes: ['store'],
+        maxResultCount: 5,
+        locationRestriction: {
+          circle: {
+            center: {
+              latitude: userLocation.lat,
+              longitude: userLocation.lon
+            },
+            radius: 8000.0 // 5 miles in meters
+          }
+        },
+        rankPreference: 'DISTANCE'
+      };
 
-      const response = await fetch(url);
+      console.log('Google Places request:', requestBody);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': CONFIG.GOOGLE_PLACES_API_KEY,
+          'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.rating,places.id'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
       if (!response.ok) {
-        console.error('Google Places API error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Google Places API error:', response.status, response.statusText, errorText);
         continue;
       }
 
       const data = await response.json();
       console.log('Google Places response:', data);
 
-      if (data.status === 'OK' && data.results) {
+      if (data.places && data.places.length > 0) {
         // Add results to alternatives
-        for (const place of data.results.slice(0, 3)) { // Max 3 per keyword
+        for (const place of data.places.slice(0, 3)) { // Max 3 per keyword
           alternatives.push({
-            name: place.name,
-            address: place.vicinity,
-            rating: place.rating || 0,
-            lat: place.geometry.location.lat,
-            lon: place.geometry.location.lng,
-            placeId: place.place_id,
+            name: place.displayName?.text || place.displayName || 'Local Store',
+            address: place.formattedAddress || 'Address unavailable',
+            rating: place.rating || 4.0,
+            lat: place.location?.latitude || userLocation.lat,
+            lon: place.location?.longitude || userLocation.lon,
+            placeId: place.id,
             type: 'local',
             typeLabel: 'Local Business',
             isReal: true, // Flag to indicate this is real data
-            googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`
+            googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.id}`
           });
         }
       } else {
-        console.log('Google Places status:', data.status, data.error_message);
+        console.log('No places found in response');
       }
 
       // Break if we have enough alternatives
