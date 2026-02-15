@@ -3,8 +3,15 @@
  * Handles messaging between content scripts and popup
  */
 
-// Import config
+// Import config (using classic service worker approach, not ES6 modules)
 importScripts('config.js');
+
+// Verify API key loaded
+console.log('Vinegar: API key loaded:', CONFIG?.ANTHROPIC_API_KEY ? 'Yes' : 'No');
+
+if (!CONFIG || !CONFIG.ANTHROPIC_API_KEY) {
+  console.error('Vinegar: CONFIG or API key not found! Make sure config.js exists and is properly formatted.');
+}
 
 // Initialize extension on install
 chrome.runtime.onInstalled.addListener((details) => {
@@ -240,6 +247,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
  */
 async function analyzeProduct(productName, userPreferences = {}) {
   console.log('Vinegar API: Analyzing product:', productName);
+
+  // Check if API key is available
+  if (!CONFIG || !CONFIG.ANTHROPIC_API_KEY || CONFIG.ANTHROPIC_API_KEY === 'your-api-key-here') {
+    throw new Error('API key not configured. Please copy config.example.js to config.js and add your API key.');
+  }
 
   try {
     // Build the prompt
