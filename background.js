@@ -1118,24 +1118,25 @@ async function findSmallOnlineRetailers(productName, productCategory) {
         continue;
       }
 
-      // Skip irrelevant domains (marketplaces, comparison sites, generic retailers)
-      const irrelevantDomains = ['reddit', 'quora', 'youtube', 'facebook', 'instagram',
-                                 'twitter', 'pinterest', 'tiktok', 'wikipedia', 'ebay',
-                                 'comparison', 'review', 'deals', 'coupons'];
-      if (irrelevantDomains.some(d => domain.includes(d))) {
+      // Skip irrelevant domains (marketplaces, comparison sites, generic eco shops)
+      const irrelevantDomains = [
+        'reddit', 'quora', 'youtube', 'facebook', 'instagram', 'twitter', 'pinterest',
+        'tiktok', 'wikipedia', 'ebay', 'comparison', 'review', 'deals', 'coupons',
+        'packagefree', 'earthhero', 'treehugger', 'sustainablejungle', 'greenmatters'
+      ];
+      if (irrelevantDomains.some(d => domain.toLowerCase().includes(d))) {
         console.log('Filtered out irrelevant domain:', domain);
         continue;
       }
 
-      // Skip if title/description doesn't seem product-related
+      // Skip if description suggests it's a generic eco/lifestyle shop (not specific product retailer)
       const titleLower = item.title.toLowerCase();
       const descLower = (item.description || '').toLowerCase();
-      const genericPhrases = ['eco-friendly', 'sustainable living', 'zero waste', 'gift shop'];
-      const seemsGeneric = genericPhrases.every(phrase =>
-        titleLower.includes(phrase) || descLower.includes(phrase)
-      );
-      if (seemsGeneric && !titleLower.includes(productName.toLowerCase().split(' ')[0])) {
-        console.log('Filtered out generic/irrelevant result:', item.title);
+      const productFirstWord = productName.toLowerCase().split(' ')[0];
+
+      // If title doesn't mention the product at all, probably irrelevant
+      if (!titleLower.includes(productFirstWord) && descLower.length < 50) {
+        console.log('Filtered out - product not in title:', item.title);
         continue;
       }
 
