@@ -17,7 +17,7 @@ console.log('Vinegar: Content script loaded, Leaflet available:', typeof L !== '
 /**
  * Detect which site we're on and extract product information
  */
-function detectAndExtractProduct() {
+async function detectAndExtractProduct() {
   const hostname = window.location.hostname;
   let data = null;
 
@@ -28,7 +28,8 @@ function detectAndExtractProduct() {
   } else if (hostname.includes('target.com')) {
     data = extractTargetProduct();
   } else if (hostname.includes('bestbuy.com')) {
-    data = extractBestBuyProduct();
+    // Best Buy uses React - need to wait for content to load
+    data = await waitForBestBuyProduct();
   }
 
   return data;
@@ -123,14 +124,30 @@ function extractTargetProduct() {
 }
 
 /**
- * Extract product data from Best Buy
+ * Extract product data from Best Buy (with retry logic for React)
  */
 function extractBestBuyProduct() {
-  // Try multiple selectors for title (BestBuy changes their layout)
+  // First, validate we're on a product page via URL
+  const url = window.location.pathname;
+  const isProductPage = /\/site\/.*\/\d+\.p/.test(url);
+
+  if (!isProductPage) {
+    console.log('Vinegar: Not a Best Buy product page (URL check)');
+    return null;
+  }
+
+  console.log('Vinegar: Best Buy product page detected via URL');
+
+  // Debug: Log what elements are available
+  console.log('Vinegar: All H1s on page:', document.querySelectorAll('h1'));
+  console.log('Vinegar: All price elements:', document.querySelectorAll('[class*="price"]'));
+
+  // Try multiple selectors for title (Best Buy's current structure)
   const titleSelectors = [
-    '.sku-title h1',
+    'h1.heading-5.v-fw-regular',  // Current Best Buy selector
     'h1.heading-5',
-    '[class*="ProductTitle"]',
+    '.sku-title h1',
+    'h1[class*="heading"]',
     'div[class*="sku-title"] h1',
     'h1[data-testid="product-title"]',
     '.product-title h1'
@@ -139,27 +156,63 @@ function extractBestBuyProduct() {
   let titleElement = null;
   for (const selector of titleSelectors) {
     titleElement = document.querySelector(selector);
-    if (titleElement && titleElement.textContent.trim()) break;
+    if (titleElement && titleElement.textContent.trim()) {
+      console.log(`Vinegar: Found title with selector: ${selector}`);
+      break;
+    }
+  }
+
+  // Fallback: try any h1
+  if (!titleElement || !titleElement.textContent.trim()) {
+    console.log('Vinegar: Trying fallback - any h1');
+    const allH1s = document.querySelectorAll('h1');
+    for (const h1 of allH1s) {
+      if (h1.textContent.trim().length > 10) { // Reasonable title length
+        titleElement = h1;
+        console.log('Vinegar: Found title using h1 fallback');
+        break;
+      }
+    }
   }
 
   if (!titleElement || !titleElement.textContent.trim()) {
     console.log('Vinegar: Could not find Best Buy product title');
+    console.log('Vinegar: This might be a React loading issue - product may not be loaded yet');
     return null;
   }
 
   // Try multiple selectors for price
   const priceSelectors = [
-    '[class*="priceView-customer-price"] span[aria-hidden="true"]',
+    '.priceView-hero-price.priceView-customer-price span[aria-hidden="true"]',
     '.priceView-hero-price span[aria-hidden="true"]',
+    '[class*="priceView-customer-price"] span[aria-hidden="true"]',
     '[data-testid="customer-price"]',
+    '.priceView-customer-price',
     '.pricing-price__regular-price',
-    'div[class*="priceView"] span:first-child'
+    'div[class*="priceView"] span[aria-hidden="true"]'
   ];
 
   let priceElement = null;
   for (const selector of priceSelectors) {
     priceElement = document.querySelector(selector);
-    if (priceElement && priceElement.textContent.trim()) break;
+    if (priceElement && priceElement.textContent.trim()) {
+      console.log(`Vinegar: Found price with selector: ${selector}`);
+      break;
+    }
+  }
+
+  // Fallback: try any element with "price" in class
+  if (!priceElement || !priceElement.textContent.trim()) {
+    console.log('Vinegar: Trying fallback - any price element');
+    const allPrices = document.querySelectorAll('[class*="price"]');
+    for (const priceEl of allPrices) {
+      const text = priceEl.textContent.trim();
+      if (text.includes('$') && text.length < 20) { // Looks like a price
+        priceElement = priceEl;
+        console.log('Vinegar: Found price using fallback');
+        break;
+      }
+    }
   }
 
   const productName = titleElement.textContent.trim();
@@ -173,6 +226,31 @@ function extractBestBuyProduct() {
     site: 'Best Buy',
     url: window.location.href
   };
+}
+
+/**
+ * Wait for Best Buy product to load (React app)
+ */
+async function waitForBestBuyProduct(maxAttempts = 10, delayMs = 500) {
+  console.log('Vinegar: Waiting for Best Buy product to load...');
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    console.log(`Vinegar: Attempt ${attempt}/${maxAttempts}`);
+
+    const product = extractBestBuyProduct();
+    if (product) {
+      console.log('Vinegar: Product found!');
+      return product;
+    }
+
+    // Wait before next attempt
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  console.log('Vinegar: Failed to find Best Buy product after', maxAttempts, 'attempts');
+  return null;
 }
 
 /**
@@ -1131,8 +1209,8 @@ async function checkForProduct() {
   console.log('Vinegar: Checking for product...');
 
   // Wait a bit for dynamic content to load
-  setTimeout(() => {
-    const data = detectAndExtractProduct();
+  setTimeout(async () => {
+    const data = await detectAndExtractProduct();
 
     if (data) {
       console.log('Vinegar: Product detected:', data);
