@@ -667,7 +667,7 @@ function filterAndScorePlaces(places, productCategory, analysis, currentSite = n
         ...place,
         relevanceScore,
         name: place.displayName?.text || place.displayName || 'Local Store',
-        address: place.formattedAddress || 'Address unavailable',
+        address: (place.formattedAddress && place.formattedAddress !== 'undefined') ? place.formattedAddress : null,
         rating: place.rating || 4.0,
         lat: place.location?.latitude,
         lon: place.location?.longitude,
