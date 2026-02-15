@@ -277,38 +277,66 @@ async function analyzeProduct(productName, userPreferences = {}) {
     throw new Error('API key not configured. Please copy config.example.js to config.js and add your API key.');
   }
 
+  // Detailed logging for debugging
+  console.log('API Key being used:', CONFIG.ANTHROPIC_API_KEY.substring(0, 20) + '...');
+  console.log('API Key starts with:', CONFIG.ANTHROPIC_API_KEY.substring(0, 14));
+  console.log('API Key length:', CONFIG.ANTHROPIC_API_KEY.length);
+
   try {
     // Build the prompt
     const prompt = buildAnalysisPrompt(productName, userPreferences);
 
+    const url = 'https://api.anthropic.com/v1/messages';
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': CONFIG.ANTHROPIC_API_KEY,
+      'anthropic-version': '2023-06-01'
+    };
+    const body = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1500,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    };
+
+    console.log('Request URL:', url);
+    console.log('Request headers:', JSON.stringify(headers, null, 2));
+    console.log('Request body:', JSON.stringify(body, null, 2));
+
     // Call Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CONFIG.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
+      headers: headers,
+      body: JSON.stringify(body)
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response status text:', response.statusText);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Vinegar API: API error:', errorData);
+      // Get full error response text
+      const errorText = await response.text();
+      console.error('Vinegar API: API error response:', errorText);
+
+      // Try to parse as JSON
+      let errorData = {};
+      try {
+        errorData = JSON.parse(errorText);
+        console.error('Vinegar API: Parsed error:', errorData);
+      } catch (e) {
+        console.error('Vinegar API: Could not parse error as JSON');
+      }
 
       if (response.status === 429) {
         throw new Error('API_RATE_LIMIT');
+      } else if (response.status === 401) {
+        throw new Error(`API_ERROR: 401 - Unauthorized. API key may be invalid or expired. Error: ${errorText}`);
       } else {
-        throw new Error(`API_ERROR: ${response.status}`);
+        throw new Error(`API_ERROR: ${response.status} - ${errorText}`);
       }
     }
 
