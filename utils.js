@@ -1,5 +1,5 @@
 /**
- * Vinegar Utility Functions
+ * Bramble Utility Functions
  * Distance calculations and location helpers
  */
 

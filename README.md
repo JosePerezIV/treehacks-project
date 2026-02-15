@@ -1,6 +1,8 @@
-# 🍃 Vinegar - Ethical Shopping Assistant
+# Bramble 🌿
 
-A professional Chrome extension that helps users shop ethically by identifying mega-corporations and suggesting local, sustainable, and fair-trade alternatives.
+Shop independently - find local alternatives to mega-corporations.
+
+A Chrome extension that helps you discover local businesses and ethical alternatives when shopping on major retail sites.
 
 ## Features
 
@@ -21,7 +23,7 @@ A professional Chrome extension that helps users shop ethically by identifying m
 3. Enable "Developer mode" in the top right corner
 4. Click "Load unpacked"
 5. Select the `treehacks-project` directory
-6. The Vinegar extension is now installed!
+6. The Bramble extension is now installed!
 
 ### Using the Extension
 
@@ -60,7 +62,7 @@ treehacks-project/
 
 ## Design System
 
-Vinegar uses a cohesive earth-tone color palette:
+Bramble uses a cohesive earth-tone color palette:
 
 - **Primary Green**: `#7ba05b` - Main brand color
 - **Dark Green**: `#5d7e47` - Hover states and emphasis
@@ -97,7 +99,7 @@ Configure your preferences in the extension popup:
 
 ## Privacy
 
-Vinegar respects your privacy:
+Bramble respects your privacy:
 - No data collection or tracking
 - No external API calls (in current version)
 - All data stored locally on your device

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Vinegar",
+  "name": "Bramble",
   "version": "1.0.0",
-  "description": "Shop aligned with your values by understanding companies and discovering local alternatives.",
+  "description": "Shop independently by discovering local businesses and ethical alternatives to mega-corporations.",
   "permissions": [
     "storage",
     "activeTab"

@@ -12,7 +12,7 @@ let map = null;
 let isMapVisible = false;
 
 // Check if Leaflet loaded
-console.log('Vinegar: Content script loaded, Leaflet available:', typeof L !== 'undefined');
+console.log('Bramble: Content script loaded, Leaflet available:', typeof L !== 'undefined');
 
 /**
  * Detect which site we're on and extract product information
@@ -55,7 +55,7 @@ function extractAmazonProduct() {
   }
 
   if (!titleElement || !titleElement.textContent.trim()) {
-    console.log('Vinegar: Could not find Amazon product title');
+    console.log('Bramble: Could not find Amazon product title');
     return null;
   }
 
@@ -79,7 +79,7 @@ function extractAmazonProduct() {
   const productName = titleElement.textContent.trim();
   const productPrice = priceElement ? priceElement.textContent.trim() : 'Price not available';
 
-  console.log('Vinegar: Extracted Amazon product:', { productName, productPrice });
+  console.log('Bramble: Extracted Amazon product:', { productName, productPrice });
 
   return {
     name: productName,
@@ -133,15 +133,15 @@ function extractBestBuyProduct() {
   const isProductPage = /\/product\/[^\/]+\/[A-Z0-9]+/.test(url);
 
   if (!isProductPage) {
-    console.log('Vinegar: Not a Best Buy product page (URL check failed for:', url);
+    console.log('Bramble: Not a Best Buy product page (URL check failed for:', url);
     return null;
   }
 
-  console.log('Vinegar: Best Buy product page detected via URL:', url);
+  console.log('Bramble: Best Buy product page detected via URL:', url);
 
   // Debug: Log what elements are available
-  console.log('Vinegar: All H1s on page:', document.querySelectorAll('h1'));
-  console.log('Vinegar: All price elements:', document.querySelectorAll('[class*="price"]'));
+  console.log('Bramble: All H1s on page:', document.querySelectorAll('h1'));
+  console.log('Bramble: All price elements:', document.querySelectorAll('[class*="price"]'));
 
   // Try multiple selectors for title (Best Buy's current structure)
   const titleSelectors = [
@@ -158,27 +158,27 @@ function extractBestBuyProduct() {
   for (const selector of titleSelectors) {
     titleElement = document.querySelector(selector);
     if (titleElement && titleElement.textContent.trim()) {
-      console.log(`Vinegar: Found title with selector: ${selector}`);
+      console.log(`Bramble: Found title with selector: ${selector}`);
       break;
     }
   }
 
   // Fallback: try any h1
   if (!titleElement || !titleElement.textContent.trim()) {
-    console.log('Vinegar: Trying fallback - any h1');
+    console.log('Bramble: Trying fallback - any h1');
     const allH1s = document.querySelectorAll('h1');
     for (const h1 of allH1s) {
       if (h1.textContent.trim().length > 10) { // Reasonable title length
         titleElement = h1;
-        console.log('Vinegar: Found title using h1 fallback');
+        console.log('Bramble: Found title using h1 fallback');
         break;
       }
     }
   }
 
   if (!titleElement || !titleElement.textContent.trim()) {
-    console.log('Vinegar: Could not find Best Buy product title');
-    console.log('Vinegar: This might be a React loading issue - product may not be loaded yet');
+    console.log('Bramble: Could not find Best Buy product title');
+    console.log('Bramble: This might be a React loading issue - product may not be loaded yet');
     return null;
   }
 
@@ -199,21 +199,21 @@ function extractBestBuyProduct() {
   for (const selector of priceSelectors) {
     priceElement = document.querySelector(selector);
     if (priceElement && priceElement.textContent.trim()) {
-      console.log(`Vinegar: Found price with selector: ${selector}`);
+      console.log(`Bramble: Found price with selector: ${selector}`);
       break;
     }
   }
 
   // Fallback 1: try any element with "price" in class that looks like a price
   if (!priceElement || !priceElement.textContent.trim()) {
-    console.log('Vinegar: Trying fallback 1 - any price element with $');
+    console.log('Bramble: Trying fallback 1 - any price element with $');
     const allPrices = document.querySelectorAll('[class*="price"]');
     for (const priceEl of allPrices) {
       const text = priceEl.textContent.trim();
       // Look for "$XX.XX" or "$X,XXX.XX" format
       if (/\$[\d,]+\.?\d*/.test(text) && text.length < 30) {
         priceElement = priceEl;
-        console.log('Vinegar: Found price using fallback 1:', text);
+        console.log('Bramble: Found price using fallback 1:', text);
         break;
       }
     }
@@ -221,14 +221,14 @@ function extractBestBuyProduct() {
 
   // Fallback 2: search entire page for price-like patterns
   if (!priceElement || !priceElement.textContent.trim()) {
-    console.log('Vinegar: Trying fallback 2 - searching all elements for price pattern');
+    console.log('Bramble: Trying fallback 2 - searching all elements for price pattern');
     const allElements = document.querySelectorAll('span, div');
     for (const el of allElements) {
       const text = el.textContent.trim();
       // Very specific: starts with $, followed by digits, possibly comma, possibly decimal
       if (/^\$[\d,]+\.?\d*$/.test(text) && text.length < 15 && parseFloat(text.replace(/[$,]/g, '')) > 10) {
         priceElement = el;
-        console.log('Vinegar: Found price using fallback 2:', text);
+        console.log('Bramble: Found price using fallback 2:', text);
         break;
       }
     }
@@ -237,7 +237,7 @@ function extractBestBuyProduct() {
   const productName = titleElement.textContent.trim();
   const productPrice = priceElement ? priceElement.textContent.trim() : 'Price not available';
 
-  console.log('Vinegar: Extracted Best Buy product:', { productName, productPrice });
+  console.log('Bramble: Extracted Best Buy product:', { productName, productPrice });
 
   return {
     name: productName,
@@ -251,14 +251,14 @@ function extractBestBuyProduct() {
  * Wait for Best Buy product to load (React app)
  */
 async function waitForBestBuyProduct(maxAttempts = 10, delayMs = 500) {
-  console.log('Vinegar: Waiting for Best Buy product to load...');
+  console.log('Bramble: Waiting for Best Buy product to load...');
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    console.log(`Vinegar: Attempt ${attempt}/${maxAttempts}`);
+    console.log(`Bramble: Attempt ${attempt}/${maxAttempts}`);
 
     const product = extractBestBuyProduct();
     if (product) {
-      console.log('Vinegar: Product found!');
+      console.log('Bramble: Product found!');
       return product;
     }
 
@@ -268,7 +268,7 @@ async function waitForBestBuyProduct(maxAttempts = 10, delayMs = 500) {
     }
   }
 
-  console.log('Vinegar: Failed to find Best Buy product after', maxAttempts, 'attempts');
+  console.log('Bramble: Failed to find Best Buy product after', maxAttempts, 'attempts');
   return null;
 }
 
@@ -277,11 +277,11 @@ async function waitForBestBuyProduct(maxAttempts = 10, delayMs = 500) {
  */
 async function injectSidePanel(data) {
   if (isPanelInjected) {
-    console.log('Vinegar: Panel already injected');
+    console.log('Bramble: Panel already injected');
     return;
   }
 
-  console.log('Vinegar: Injecting side panel with data:', data);
+  console.log('Bramble: Injecting side panel with data:', data);
   productData = data;
 
   try {
@@ -290,10 +290,10 @@ async function injectSidePanel(data) {
       const settings = await chrome.storage.sync.get('settings');
       if (settings.settings?.location) {
         userLocation = settings.settings.location;
-        console.log('Vinegar: User location loaded:', userLocation);
+        console.log('Bramble: User location loaded:', userLocation);
       }
     } else {
-      console.warn('Vinegar: chrome.storage not available, skipping location load');
+      console.warn('Bramble: chrome.storage not available, skipping location load');
     }
 
     // Leaflet and utils.js are now loaded via manifest.json content_scripts
@@ -312,7 +312,7 @@ async function injectSidePanel(data) {
     panelContainer.innerHTML = html;
     document.body.appendChild(panelContainer);
 
-    console.log('Vinegar: Panel HTML injected');
+    console.log('Bramble: Panel HTML injected');
 
     // Wait a moment for DOM to settle
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -320,28 +320,28 @@ async function injectSidePanel(data) {
     // Setup toggle button
     const toggleBtn = document.getElementById('vinegar-toggle');
     if (toggleBtn) {
-      console.log('Vinegar: Toggle button found, adding event listener');
+      console.log('Bramble: Toggle button found, adding event listener');
       toggleBtn.addEventListener('click', togglePanel);
     } else {
-      console.error('Vinegar: Toggle button not found!');
+      console.error('Bramble: Toggle button not found!');
     }
 
     // Initialize panel content with product data
     initializePanelContent(data);
 
     isPanelInjected = true;
-    console.log('Vinegar: Panel injection complete');
+    console.log('Bramble: Panel injection complete');
 
     // Send product data to background script
     chrome.runtime.sendMessage({
       type: 'PRODUCT_DETECTED',
       data: data
     }).catch(err => {
-      console.log('Vinegar: Could not send message to background:', err);
+      console.log('Bramble: Could not send message to background:', err);
     });
 
   } catch (error) {
-    console.error('Vinegar: Error injecting panel:', error);
+    console.error('Bramble: Error injecting panel:', error);
   }
 }
 
@@ -349,12 +349,12 @@ async function injectSidePanel(data) {
  * Toggle panel open/closed
  */
 function togglePanel() {
-  console.log('Vinegar: Toggle button clicked');
+  console.log('Bramble: Toggle button clicked');
   const container = document.getElementById('vinegar-sidepanel-container');
   const panel = document.getElementById('vinegar-panel');
 
   if (!container || !panel) {
-    console.error('Vinegar: Panel elements not found');
+    console.error('Bramble: Panel elements not found');
     return;
   }
 
@@ -363,13 +363,13 @@ function togglePanel() {
   if (isExpanded) {
     container.classList.remove('vinegar-expanded');
     container.classList.add('vinegar-collapsed');
-    console.log('Vinegar: Panel collapsed');
+    console.log('Bramble: Panel collapsed');
   } else {
     container.classList.remove('vinegar-collapsed');
     container.classList.add('vinegar-expanded');
     panel.classList.add('vinegar-slide-in');
     setTimeout(() => panel.classList.remove('vinegar-slide-in'), 300);
-    console.log('Vinegar: Panel expanded');
+    console.log('Bramble: Panel expanded');
   }
 }
 
@@ -377,7 +377,7 @@ function togglePanel() {
  * Initialize panel content with product data
  */
 function initializePanelContent(data) {
-  console.log('Vinegar: Initializing panel content');
+  console.log('Bramble: Initializing panel content');
 
   if (!data) return;
 
@@ -388,15 +388,15 @@ function initializePanelContent(data) {
 
   if (productNameEl) {
     productNameEl.textContent = data.name;
-    console.log('Vinegar: Set product name:', data.name);
+    console.log('Bramble: Set product name:', data.name);
   }
   if (productPriceEl) {
     productPriceEl.textContent = data.price;
-    console.log('Vinegar: Set product price:', data.price);
+    console.log('Bramble: Set product price:', data.price);
   }
   if (productSiteEl) {
     productSiteEl.innerHTML = `<span class="site-badge">${data.site}</span>`;
-    console.log('Vinegar: Set product site:', data.site);
+    console.log('Bramble: Set product site:', data.site);
   }
 
   // Start API analysis (async)
@@ -410,7 +410,7 @@ function initializePanelContent(data) {
  * Analyze product using Claude API
  */
 async function analyzeProductWithAPI(data) {
-  console.log('Vinegar: Starting API analysis');
+  console.log('Bramble: Starting API analysis');
 
   // Show loading state
   showAnalysisLoading(true);
@@ -444,7 +444,7 @@ async function analyzeProductWithAPI(data) {
       showAnalysisLoading(false);
 
       if (chrome.runtime.lastError) {
-        console.error('Vinegar: Runtime error:', chrome.runtime.lastError);
+        console.error('Bramble: Runtime error:', chrome.runtime.lastError);
         showAnalysisError('Unable to analyze product. Please try again later.');
         const fallback = getFallbackAnalysis(data.name);
         updateCompanyAnalysis(fallback);
@@ -453,7 +453,7 @@ async function analyzeProductWithAPI(data) {
       }
 
       if (response.error) {
-        console.error('Vinegar: API analysis failed:', response.error);
+        console.error('Bramble: API analysis failed:', response.error);
 
         // Show appropriate error message
         if (response.error === 'API_RATE_LIMIT') {
@@ -478,16 +478,16 @@ async function analyzeProductWithAPI(data) {
 
         // If we have real local alternatives, use them
         if (response.localAlternatives && response.localAlternatives.length > 0) {
-          console.log('Vinegar: Using real local alternatives from Google Places');
+          console.log('Bramble: Using real local alternatives from Google Places');
           displayRealAlternatives(response.localAlternatives, response.alternativeTypes);
         }
 
-        console.log('Vinegar: API analysis complete');
+        console.log('Bramble: API analysis complete');
       }
     });
 
   } catch (error) {
-    console.error('Vinegar: Error calling API:', error);
+    console.error('Bramble: Error calling API:', error);
     showAnalysisError('Unable to analyze product. Please try again later.');
 
     const fallback = getFallbackAnalysis(data.name);
@@ -695,13 +695,13 @@ function showAnalysisError(message) {
  * Load and display ethical alternatives
  */
 async function loadAlternatives(data) {
-  console.log('Vinegar: Loading alternatives');
+  console.log('Bramble: Loading alternatives');
 
   const alternativesList = document.getElementById('alternatives-list');
   const loadingState = document.getElementById('loading-state');
 
   if (!alternativesList) {
-    console.error('Vinegar: Alternatives list not found');
+    console.error('Bramble: Alternatives list not found');
     return;
   }
 
@@ -749,7 +749,7 @@ async function loadAlternatives(data) {
       });
     }
 
-    console.log('Vinegar: Location not set - showing prompt');
+    console.log('Bramble: Location not set - showing prompt');
     return;
   }
 
@@ -759,7 +759,7 @@ async function loadAlternatives(data) {
   // Wait for API response (real alternatives will replace this if found)
   setTimeout(() => {
     if (loadingState) loadingState.style.display = 'none';
-    console.log('Vinegar: Waiting for real alternatives from API...');
+    console.log('Bramble: Waiting for real alternatives from API...');
   }, 1000);
 }
 
@@ -767,7 +767,7 @@ async function loadAlternatives(data) {
  * Display real alternatives from Google Places API
  */
 function displayRealAlternatives(localAlternatives, alternativeTypes) {
-  console.log('Vinegar: Displaying real alternatives from Google Places');
+  console.log('Bramble: Displaying real alternatives from Google Places');
 
   const alternativesList = document.getElementById('alternatives-list');
   if (!alternativesList) return;
@@ -869,7 +869,7 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
     }, index * 100);
   });
 
-  console.log('Vinegar: Displayed', allAlternatives.length, 'alternatives (', localAlternatives.length, 'local,', onlineCount, 'online)');
+  console.log('Bramble: Displayed', allAlternatives.length, 'alternatives (', localAlternatives.length, 'local,', onlineCount, 'online)');
 
   // Add transparency note
   if (allAlternatives.length > 0) {
@@ -954,7 +954,7 @@ function toggleMap() {
  * Initialize Leaflet map
  */
 function initializeMap() {
-  console.log('Vinegar: Initializing map');
+  console.log('Bramble: Initializing map');
 
   const mapContainer = document.getElementById('alternatives-map');
   const noLocationDiv = document.getElementById('map-no-location');
@@ -974,8 +974,8 @@ function initializeMap() {
 
   // Check if Leaflet is loaded
   if (typeof L === 'undefined') {
-    console.error('Vinegar: Leaflet not loaded - this should not happen!');
-    console.error('Vinegar: Please reload the extension and try again');
+    console.error('Bramble: Leaflet not loaded - this should not happen!');
+    console.error('Bramble: Please reload the extension and try again');
 
     // Show error to user
     mapContainer.innerHTML = `
@@ -987,14 +987,14 @@ function initializeMap() {
     return;
   }
 
-  console.log('Vinegar: Leaflet loaded successfully, version:', L.version);
+  console.log('Bramble: Leaflet loaded successfully, version:', L.version);
 
   // Configure Leaflet icon paths to use extension resources
   L.Icon.Default.prototype.options.iconUrl = chrome.runtime.getURL('lib/images/marker-icon.png');
   L.Icon.Default.prototype.options.iconRetinaUrl = chrome.runtime.getURL('lib/images/marker-icon-2x.png');
   L.Icon.Default.prototype.options.shadowUrl = chrome.runtime.getURL('lib/images/marker-shadow.png');
 
-  console.log('Vinegar: Icon paths configured');
+  console.log('Bramble: Icon paths configured');
 
   try {
     // Create map centered on user location
@@ -1040,10 +1040,10 @@ function initializeMap() {
       map.fitBounds(bounds, { padding: [50, 50] });
     }
 
-    console.log('Vinegar: Map initialized successfully');
+    console.log('Bramble: Map initialized successfully');
 
   } catch (error) {
-    console.error('Vinegar: Error initializing map:', error);
+    console.error('Bramble: Error initializing map:', error);
   }
 }
 
@@ -1302,7 +1302,7 @@ async function updateImpactStats(productPrice, alternativesCount, closestDistanc
   try {
     // Safety check for chrome.storage
     if (!chrome?.storage?.local) {
-      console.warn('Vinegar: chrome.storage.local not available, skipping stats update');
+      console.warn('Bramble: chrome.storage.local not available, skipping stats update');
       return;
     }
 
@@ -1320,9 +1320,9 @@ async function updateImpactStats(productPrice, alternativesCount, closestDistanc
     // Save updated stats
     await chrome.storage.local.set({ impactData: impact });
 
-    console.log('Vinegar: Impact stats updated:', impact);
+    console.log('Bramble: Impact stats updated:', impact);
   } catch (error) {
-    console.error('Vinegar: Error updating impact stats:', error);
+    console.error('Bramble: Error updating impact stats:', error);
   }
 }
 
@@ -1345,7 +1345,7 @@ function getFallbackAnalysis(productName) {
  * Initialize the extension on page load
  */
 function initialize() {
-  console.log('Vinegar: Initializing content script');
+  console.log('Bramble: Initializing content script');
 
   // Wait for page to be fully loaded
   if (document.readyState === 'loading') {
@@ -1373,17 +1373,17 @@ function initialize() {
  * Check if we're on a product page and inject panel
  */
 async function checkForProduct() {
-  console.log('Vinegar: Checking for product...');
+  console.log('Bramble: Checking for product...');
 
   // Wait a bit for dynamic content to load
   setTimeout(async () => {
     const data = await detectAndExtractProduct();
 
     if (data) {
-      console.log('Vinegar: Product detected:', data);
+      console.log('Bramble: Product detected:', data);
       injectSidePanel(data);
     } else {
-      console.log('Vinegar: No product detected on this page');
+      console.log('Bramble: No product detected on this page');
     }
   }, 2000);
 }

@@ -1,5 +1,5 @@
 /**
- * Vinegar Configuration Template
+ * Bramble Configuration Template
  * Copy this file to config.js and add your actual API key.
  */
 

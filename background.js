@@ -6,17 +6,17 @@
 // Import config (using classic service worker approach, not ES6 modules)
 try {
   importScripts('config.js');
-  console.log('Vinegar: config.js loaded successfully');
+  console.log('Bramble: config.js loaded successfully');
 } catch (error) {
-  console.error('Vinegar: Failed to load config.js:', error);
+  console.error('Bramble: Failed to load config.js:', error);
 }
 
 // Verify API key loaded
-console.log('Vinegar: API key loaded:', typeof CONFIG !== 'undefined' && CONFIG?.ANTHROPIC_API_KEY ? 'Yes' : 'No');
+console.log('Bramble: API key loaded:', typeof CONFIG !== 'undefined' && CONFIG?.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
 if (typeof CONFIG === 'undefined' || !CONFIG || !CONFIG.ANTHROPIC_API_KEY) {
-  console.error('Vinegar: CONFIG or API key not found! Make sure config.js exists and is properly formatted.');
-  console.error('Vinegar: CONFIG type:', typeof CONFIG);
+  console.error('Bramble: CONFIG or API key not found! Make sure config.js exists and is properly formatted.');
+  console.error('Bramble: CONFIG type:', typeof CONFIG);
 }
 
 // Initialize extension on install
@@ -55,14 +55,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // Handle API analysis request from content script
   if (request.action === 'analyzeProduct') {
-    console.log('Vinegar: Processing analyzeProduct request for:', request.productName);
-    console.log('Vinegar: CONFIG available?', typeof CONFIG !== 'undefined');
-    console.log('Vinegar: API key available?', typeof CONFIG !== 'undefined' && CONFIG.ANTHROPIC_API_KEY ? 'Yes' : 'No');
+    console.log('Bramble: Processing analyzeProduct request for:', request.productName);
+    console.log('Bramble: CONFIG available?', typeof CONFIG !== 'undefined');
+    console.log('Bramble: API key available?', typeof CONFIG !== 'undefined' && CONFIG.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
     // Step 1: Analyze with Claude
     analyzeProduct(request.productName, request.userPreferences)
       .then(async analysis => {
-        console.log('Vinegar: Analysis successful');
+        console.log('Bramble: Analysis successful');
 
         // Step 2: Find real local alternatives using Google Places (if enabled)
         let localAlternatives = [];
@@ -75,12 +75,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               analysis,
               request.currentSite // Pass current site to exclude it
             );
-            console.log('Vinegar: Found', localAlternatives.length, 'local alternatives');
+            console.log('Bramble: Found', localAlternatives.length, 'local alternatives');
           } catch (placesError) {
-            console.error('Vinegar: Google Places error:', placesError);
+            console.error('Bramble: Google Places error:', placesError);
           }
         } else {
-          console.log('Vinegar: Local business search disabled by user preference');
+          console.log('Bramble: Local business search disabled by user preference');
         }
 
         // Step 3: Find small online retailers using web search
@@ -90,20 +90,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             request.productName,
             analysis.productCategory
           );
-          console.log('Vinegar: Found', onlineAlternatives.length, 'online alternatives');
+          console.log('Bramble: Found', onlineAlternatives.length, 'online alternatives');
         } catch (searchError) {
-          console.error('Vinegar: Web search error:', searchError);
+          console.error('Bramble: Web search error:', searchError);
         }
 
         // Combine alternatives: local first, then online
         analysis.localAlternatives = [...localAlternatives, ...onlineAlternatives];
 
-        console.log('Vinegar: Sending complete response with', analysis.localAlternatives.length, 'total alternatives');
+        console.log('Bramble: Sending complete response with', analysis.localAlternatives.length, 'total alternatives');
         sendResponse(analysis);
       })
       .catch(error => {
-        console.error('Vinegar: Analysis failed:', error);
-        console.error('Vinegar: Error details:', {
+        console.error('Bramble: Analysis failed:', error);
+        console.error('Bramble: Error details:', {
           name: error.name,
           message: error.message,
           stack: error.stack
@@ -929,7 +929,7 @@ function calculateAlignmentScore(companyData, userPreferences) {
   // Clamp score between 0 and 100
   const finalScore = Math.max(0, Math.min(100, score));
 
-  console.log('Vinegar: Alignment score calculated:', finalScore, 'from', breakdown.length, 'factors');
+  console.log('Bramble: Alignment score calculated:', finalScore, 'from', breakdown.length, 'factors');
 
   return {
     score: finalScore,
@@ -1111,11 +1111,11 @@ async function findSmallOnlineRetailers(productName, productCategory) {
 
     for (const item of data.web.results.slice(0, 8)) { // Check up to 8 results
       const domain = new URL(item.url).hostname;
-      console.log('Vinegar: Checking domain:', domain, 'for product:', productName);
+      console.log('Bramble: Checking domain:', domain, 'for product:', productName);
 
       // Skip mega-corps
       if (isMegaCorp(domain)) {
-        console.log('Vinegar: ❌ Filtered mega-corp:', domain);
+        console.log('Bramble: ❌ Filtered mega-corp:', domain);
         continue;
       }
 
@@ -1128,10 +1128,10 @@ async function findSmallOnlineRetailers(productName, productCategory) {
       const domainLower = domain.toLowerCase();
       const isIrrelevant = irrelevantDomains.some(d => domainLower.includes(d));
       if (isIrrelevant) {
-        console.log('Vinegar: ❌ Filtered irrelevant domain:', domain, '(matched:', irrelevantDomains.find(d => domainLower.includes(d)), ')');
+        console.log('Bramble: ❌ Filtered irrelevant domain:', domain, '(matched:', irrelevantDomains.find(d => domainLower.includes(d)), ')');
         continue;
       }
-      console.log('Vinegar: ✅ Domain passed filter:', domain);
+      console.log('Bramble: ✅ Domain passed filter:', domain);
 
       // Skip if description suggests it's a generic eco/lifestyle shop (not specific product retailer)
       const titleLower = item.title.toLowerCase();

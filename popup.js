@@ -1,5 +1,5 @@
 /**
- * Vinegar Popup Controller
+ * Bramble Popup Controller
  * Manages extension settings and user preferences
  */
 
@@ -625,11 +625,11 @@ function showSaveNotification() {
  * Show about dialog
  */
 function showAboutDialog() {
-  alert(`Vinegar - Ethical Shopping Assistant
+  alert(`Bramble - Ethical Shopping Assistant
 
 Version 1.0.0
 
-Vinegar helps you make more ethical shopping choices by identifying corporations and suggesting local, sustainable, and fair-trade alternatives.
+Bramble helps you make more ethical shopping choices by identifying corporations and suggesting local, sustainable, and fair-trade alternatives.
 
 Our mission is to empower consumers to vote with their wallets and support businesses that align with their values.
 
@@ -642,7 +642,7 @@ Made with 🍃 for conscious consumers`);
 function showPrivacyDialog() {
   alert(`Privacy Policy
 
-Vinegar respects your privacy:
+Bramble respects your privacy:
 
 • We do not collect personal information
 • Product browsing data stays on your device

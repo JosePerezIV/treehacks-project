@@ -1,5 +1,5 @@
 /**
- * Vinegar API Integration
+ * Bramble API Integration
  * Claude API for product analysis and ethical scoring
  */
 
@@ -10,7 +10,7 @@
  * @returns {Promise<Object>} Analysis results
  */
 async function analyzeProduct(productName, userPreferences = {}) {
-  console.log('Vinegar API: Analyzing product:', productName);
+  console.log('Bramble API: Analyzing product:', productName);
 
   try {
 
@@ -39,7 +39,7 @@ async function analyzeProduct(productName, userPreferences = {}) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Vinegar API: API error:', errorData);
+      console.error('Bramble API: API error:', errorData);
 
       if (response.status === 429) {
         throw new Error('API_RATE_LIMIT');
@@ -49,7 +49,7 @@ async function analyzeProduct(productName, userPreferences = {}) {
     }
 
     const data = await response.json();
-    console.log('Vinegar API: Raw response:', data);
+    console.log('Bramble API: Raw response:', data);
 
     // Extract text from Claude's response
     const text = data.content[0].text;
@@ -57,12 +57,12 @@ async function analyzeProduct(productName, userPreferences = {}) {
     // Parse JSON, stripping markdown if present
     const analysis = parseClaudeResponse(text);
 
-    console.log('Vinegar API: Parsed analysis:', analysis);
+    console.log('Bramble API: Parsed analysis:', analysis);
 
     return analysis;
 
   } catch (error) {
-    console.error('Vinegar API: Error:', error);
+    console.error('Bramble API: Error:', error);
     throw error;
   }
 }
@@ -138,8 +138,8 @@ function parseClaudeResponse(text) {
     return parsed;
 
   } catch (error) {
-    console.error('Vinegar API: Failed to parse response:', error);
-    console.error('Vinegar API: Raw text:', text);
+    console.error('Bramble API: Failed to parse response:', error);
+    console.error('Bramble API: Raw text:', text);
     throw new Error('PARSE_ERROR');
   }
 }
