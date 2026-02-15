@@ -511,34 +511,63 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
     localAlternatives.sort((a, b) => (a.distance || 999) - (b.distance || 999));
   }
 
-  // Add a couple of online sustainable alternatives
+  // Determine how many online alternatives to show based on local results
+  const onlineCount = localAlternatives.length < 3 ? 4 : 2;
+
+  // Add online sustainable alternatives
   const onlineAlternatives = [
     {
-      name: 'Sustainable Online Alternative',
+      name: 'Package Free Shop',
       type: 'sustainable',
-      typeLabel: 'Sustainable',
-      features: ['Carbon neutral shipping', 'Eco-friendly materials', 'B-Corp certified'],
-      rating: 4.6,
-      url: '#',
+      typeLabel: 'Online - Sustainable',
+      features: ['Zero waste packaging', 'Plastic-free', 'B-Corp certified'],
+      rating: 4.7,
+      url: 'https://packagefreeshop.com',
       isReal: false
     },
     {
-      name: 'Fair Trade Online Shop',
+      name: 'EarthHero',
+      type: 'sustainable',
+      typeLabel: 'Online - Sustainable',
+      features: ['Carbon neutral', 'Eco-friendly', 'Vetted products'],
+      rating: 4.6,
+      url: 'https://earthhero.com',
+      isReal: false
+    },
+    {
+      name: 'Ten Thousand Villages',
       type: 'ethical',
-      typeLabel: 'Fair Trade',
-      features: ['Worker-owned', 'Ethical sourcing', 'Living wages'],
-      rating: 4.7,
-      url: '#',
+      typeLabel: 'Online - Fair Trade',
+      features: ['Fair trade', 'Artisan made', 'Direct trade'],
+      rating: 4.8,
+      url: 'https://tenthousandvillages.com',
+      isReal: false
+    },
+    {
+      name: 'Etsy (Sustainable Sellers)',
+      type: 'ethical',
+      typeLabel: 'Online - Handmade',
+      features: ['Small business', 'Handmade', 'Unique items'],
+      rating: 4.5,
+      url: 'https://www.etsy.com/c/craft-supplies-and-tools/home-and-hobby/sustainable-living',
       isReal: false
     }
   ];
 
   // Combine: local alternatives first, then online
-  const allAlternatives = [...localAlternatives, ...onlineAlternatives.slice(0, 2)];
+  const allAlternatives = [...localAlternatives, ...onlineAlternatives.slice(0, onlineCount)];
   currentAlternatives = allAlternatives; // Store for map use
 
   // Clear existing
   alternativesList.innerHTML = '';
+
+  // Show message if no local alternatives found
+  if (localAlternatives.length === 0) {
+    const noLocalMsg = document.createElement('div');
+    noLocalMsg.style.cssText = 'padding: 16px; text-align: center; color: var(--text-medium); font-size: 13px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 16px;';
+    noLocalMsg.innerHTML = '📍 No local stores found nearby. Check out these sustainable online retailers:';
+    alternativesList.appendChild(noLocalMsg);
+  }
 
   // Display alternatives
   allAlternatives.forEach((alt, index) => {
@@ -551,7 +580,7 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
     }, index * 100);
   });
 
-  console.log('Vinegar: Displayed', allAlternatives.length, 'alternatives');
+  console.log('Vinegar: Displayed', allAlternatives.length, 'alternatives (', localAlternatives.length, 'local,', onlineCount, 'online)');
 
   // Setup map button
   setupMapButton();

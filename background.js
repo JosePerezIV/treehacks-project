@@ -71,7 +71,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const localAlternatives = await findLocalAlternatives(
             analysis.productCategory,
             request.userPreferences.location,
-            analysis.suggestedStoreKeywords || []
+            analysis
           );
 
           // Add local alternatives to the response
@@ -390,8 +390,8 @@ async function analyzeProduct(productName, userPreferences = {}) {
 /**
  * Find real local alternatives using Google Places API (New)
  */
-async function findLocalAlternatives(productCategory, userLocation, keywords) {
-  console.log('Finding local alternatives:', { productCategory, userLocation, keywords });
+async function findLocalAlternatives(productCategory, userLocation, analysis) {
+  console.log('Finding local alternatives:', { productCategory, userLocation, analysis });
 
   if (!userLocation || !userLocation.lat || !userLocation.lon) {
     console.log('No user location available, skipping Google Places search');
@@ -404,83 +404,183 @@ async function findLocalAlternatives(productCategory, userLocation, keywords) {
   }
 
   try {
-    const alternatives = [];
+    const allPlaces = [];
+    const seenPlaceIds = new Set();
 
-    // Try searching with each keyword
-    for (const keyword of keywords.slice(0, 2)) { // Limit to first 2 keywords
-      const searchQuery = `${keyword} ${productCategory}`;
-      console.log('Searching Google Places for:', searchQuery);
-
-      // Use new Places API (New) with searchNearby
-      const url = 'https://places.googleapis.com/v1/places:searchNearby';
-
-      const requestBody = {
-        includedTypes: ['store'],
-        maxResultCount: 5,
-        locationRestriction: {
-          circle: {
-            center: {
-              latitude: userLocation.lat,
-              longitude: userLocation.lon
-            },
-            radius: 8000.0 // 5 miles in meters
-          }
-        },
-        rankPreference: 'DISTANCE'
-      };
-
-      console.log('Google Places request:', requestBody);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': CONFIG.GOOGLE_PLACES_API_KEY,
-          'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.rating,places.id'
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Google Places API error:', response.status, response.statusText, errorText);
-        continue;
-      }
-
-      const data = await response.json();
-      console.log('Google Places response:', data);
-
-      if (data.places && data.places.length > 0) {
-        // Add results to alternatives
-        for (const place of data.places.slice(0, 3)) { // Max 3 per keyword
-          alternatives.push({
-            name: place.displayName?.text || place.displayName || 'Local Store',
-            address: place.formattedAddress || 'Address unavailable',
-            rating: place.rating || 4.0,
-            lat: place.location?.latitude || userLocation.lat,
-            lon: place.location?.longitude || userLocation.lon,
-            placeId: place.id,
-            type: 'local',
-            typeLabel: 'Local Business',
-            isReal: true, // Flag to indicate this is real data
-            googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.id}`
-          });
-        }
-      } else {
-        console.log('No places found in response');
-      }
-
-      // Break if we have enough alternatives
-      if (alternatives.length >= 5) break;
+    // Strategy 1: Search by specific store types from Claude
+    const storeTypes = analysis.suggestedStoreTypes || [];
+    for (const storeType of storeTypes.slice(0, 2)) {
+      console.log('Strategy 1: Searching by store type:', storeType);
+      const places = await searchPlacesByType(userLocation, storeType, analysis.googlePlacesTypes);
+      addUniquePlaces(allPlaces, places, seenPlaceIds);
     }
 
-    console.log('Found local alternatives:', alternatives.length);
-    return alternatives;
+    // Strategy 2: Search by store names (chains like REI, Whole Foods, etc.)
+    const storeNames = analysis.suggestedStoreNames || [];
+    for (const storeName of storeNames.slice(0, 2)) {
+      console.log('Strategy 2: Searching by store name:', storeName);
+      const places = await searchPlacesByName(userLocation, storeName);
+      addUniquePlaces(allPlaces, places, seenPlaceIds);
+    }
+
+    // Strategy 3: Generic search by product category if we don't have enough
+    if (allPlaces.length < 3 && productCategory) {
+      console.log('Strategy 3: Generic search by category:', productCategory);
+      const places = await searchPlacesByType(userLocation, productCategory, ['store']);
+      addUniquePlaces(allPlaces, places, seenPlaceIds);
+    }
+
+    // Filter and score places by relevance
+    const filteredPlaces = filterAndScorePlaces(allPlaces, productCategory, analysis);
+
+    console.log('Found local alternatives:', filteredPlaces.length);
+    return filteredPlaces.slice(0, 6); // Return top 6
 
   } catch (error) {
     console.error('Error finding local alternatives:', error);
     return [];
   }
+}
+
+/**
+ * Search places by type/keyword
+ */
+async function searchPlacesByType(userLocation, searchTerm, includedTypes = ['store']) {
+  const url = 'https://places.googleapis.com/v1/places:searchText';
+
+  const requestBody = {
+    textQuery: searchTerm,
+    locationBias: {
+      circle: {
+        center: {
+          latitude: userLocation.lat,
+          longitude: userLocation.lon
+        },
+        radius: 8000.0
+      }
+    },
+    maxResultCount: 10
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': CONFIG.GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.rating,places.id,places.types,places.businessStatus'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      console.error('Google Places API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    return data.places || [];
+  } catch (error) {
+    console.error('Error in searchPlacesByType:', error);
+    return [];
+  }
+}
+
+/**
+ * Search places by specific name
+ */
+async function searchPlacesByName(userLocation, storeName) {
+  return await searchPlacesByType(userLocation, storeName, []);
+}
+
+/**
+ * Add unique places to the list
+ */
+function addUniquePlaces(allPlaces, newPlaces, seenPlaceIds) {
+  for (const place of newPlaces) {
+    if (!seenPlaceIds.has(place.id)) {
+      seenPlaceIds.add(place.id);
+      allPlaces.push(place);
+    }
+  }
+}
+
+/**
+ * Filter and score places by relevance
+ */
+function filterAndScorePlaces(places, productCategory, analysis) {
+  const categoryLower = productCategory.toLowerCase();
+
+  // Irrelevant types to filter out
+  const irrelevantTypes = [
+    'library', 'school', 'university', 'hospital', 'church', 'mosque',
+    'synagogue', 'cemetery', 'park', 'stadium', 'museum', 'art_gallery',
+    'movie_theater', 'bowling_alley', 'casino', 'night_club', 'bar'
+  ];
+
+  return places
+    .filter(place => {
+      // Filter out closed businesses
+      if (place.businessStatus === 'CLOSED_PERMANENTLY' || place.businessStatus === 'CLOSED_TEMPORARILY') {
+        return false;
+      }
+
+      // Filter out irrelevant types
+      const placeTypes = place.types || [];
+      if (placeTypes.some(type => irrelevantTypes.includes(type))) {
+        return false;
+      }
+
+      return true;
+    })
+    .map(place => {
+      const placeTypes = place.types || [];
+      let relevanceScore = 0;
+
+      // Score based on place types matching product category
+      const relevantTypes = {
+        'sporting_goods_store': ['water bottle', 'fitness', 'outdoor', 'camping', 'sports'],
+        'clothing_store': ['clothing', 'apparel', 'shirt', 'pants', 'dress', 'fashion'],
+        'grocery_store': ['food', 'grocery', 'snack', 'beverage', 'coffee', 'tea'],
+        'supermarket': ['food', 'grocery', 'snack', 'beverage'],
+        'convenience_store': ['snack', 'beverage', 'coffee'],
+        'home_goods_store': ['home', 'kitchen', 'furniture', 'decor'],
+        'electronics_store': ['electronics', 'phone', 'computer', 'tech'],
+        'book_store': ['book', 'reading', 'magazine']
+      };
+
+      for (const [storeType, keywords] of Object.entries(relevantTypes)) {
+        if (placeTypes.includes(storeType)) {
+          if (keywords.some(kw => categoryLower.includes(kw))) {
+            relevanceScore += 10;
+          } else {
+            relevanceScore += 2;
+          }
+        }
+      }
+
+      // Boost score if it's a general store
+      if (placeTypes.includes('store')) {
+        relevanceScore += 1;
+      }
+
+      // Add the place with relevance score
+      return {
+        ...place,
+        relevanceScore,
+        name: place.displayName?.text || place.displayName || 'Local Store',
+        address: place.formattedAddress || 'Address unavailable',
+        rating: place.rating || 4.0,
+        lat: place.location?.latitude,
+        lon: place.location?.longitude,
+        placeId: place.id,
+        type: 'local',
+        typeLabel: 'Local Business',
+        isReal: true,
+        googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.id}`
+      };
+    })
+    .sort((a, b) => b.relevanceScore - a.relevanceScore); // Sort by relevance
 }
 
 /**
@@ -500,23 +600,31 @@ Analyze this product and provide information about:
 1. The parent company that manufactures or owns this product
 2. An ethical score (0-100) based on labor practices, environmental impact, corporate ethics
 3. Key ethical concerns (if any)
-4. Product category
+4. Product category (be specific: "Water bottles", "Coffee creamer", "Women's clothing", etc.)
 5. Types of ethical alternatives available
 6. Cost-benefit analysis explaining why choosing alternatives matters
-7. Keywords for finding local alternatives
+7. SPECIFIC store types that would sell this product locally (be practical!)
+   - For water bottles: "sporting goods store", "outdoor equipment store", "REI", "Dick's Sporting Goods"
+   - For groceries: "grocery store", "organic market", "whole foods", "trader joes"
+   - For clothing: "clothing boutique", "thrift store", "apparel shop"
+   - For coffee: "coffee roaster", "specialty coffee shop", "local cafe"
+   Think about WHERE someone would actually buy this product in person!
 
 Return ONLY valid JSON with this exact structure (no markdown, no code blocks, no explanation):
 {
   "parentCompany": "Company Name",
   "ethicalScore": 0-100,
   "concerns": ["concern1", "concern2", "concern3"],
-  "productCategory": "category name",
+  "productCategory": "specific category",
   "alternativeTypes": ["Local businesses", "Sustainable brands", "Fair trade options"],
   "costBenefitAnalysis": "A persuasive 2-3 sentence explanation of why choosing ethical alternatives for this product matters, focusing on real-world impact.",
-  "suggestedStoreKeywords": ["keyword1", "keyword2", "keyword3"]
+  "suggestedStoreTypes": ["specific store type 1", "specific store type 2", "specific store type 3"],
+  "suggestedStoreNames": ["common chain 1", "common chain 2"],
+  "googlePlacesTypes": ["store", "sporting_goods_store", "clothing_store"]
 }
 
-Important: Return ONLY the JSON object, no other text.`;
+Important: Be SPECIFIC about store types. Think about where a person would physically go to buy this product!
+Return ONLY the JSON object, no other text.`;
 }
 
 /**
