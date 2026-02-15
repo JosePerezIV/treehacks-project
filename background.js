@@ -564,7 +564,6 @@ function filterAndScorePlaces(places, productCategory, analysis) {
   ];
 
   // Category-specific filtering
-  const categoryLower = productCategory.toLowerCase();
   const categorySpecificFilters = {};
 
   // For luggage/bags, exclude furniture and general leather stores
