@@ -46,20 +46,38 @@ chrome.runtime.onInstalled.addListener((details) => {
 /**
  * Handle messages from content scripts and popup
  */
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Background received message:', message);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background received message:', request);
 
-  switch (message.type) {
+  // Handle API analysis request from content script
+  if (request.action === 'analyzeProduct') {
+    console.log('Vinegar: Processing analyzeProduct request');
+    analyzeProduct(request.productName, request.userPreferences)
+      .then(analysis => {
+        console.log('Vinegar: Analysis successful, sending response');
+        sendResponse(analysis);
+      })
+      .catch(error => {
+        console.error('Vinegar: Analysis failed:', error);
+        sendResponse({ error: error.message });
+      });
+    return true; // Keep channel open for async response
+  }
+
+  // Handle other message types
+  const messageType = request.type || request.action;
+
+  switch (messageType) {
     case 'PRODUCT_DETECTED':
-      handleProductDetected(message.data, sender);
+      handleProductDetected(request.data, sender);
       break;
 
     case 'SETTINGS_UPDATED':
-      handleSettingsUpdated(message.data);
+      handleSettingsUpdated(request.data);
       break;
 
     case 'SAVE_ALTERNATIVE':
-      handleSaveAlternative(message.data);
+      handleSaveAlternative(request.data);
       break;
 
     case 'GET_SETTINGS':
@@ -70,16 +88,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       getStats().then(sendResponse);
       return true;
 
-    case 'analyzeProduct':
-      analyzeProduct(message.productName, message.userPreferences)
-        .then(sendResponse)
-        .catch(error => {
-          sendResponse({ error: error.message });
-        });
-      return true; // Keep channel open for async response
-
     default:
-      console.warn('Unknown message type:', message.type);
+      console.warn('Unknown message type:', messageType);
   }
 });
 
