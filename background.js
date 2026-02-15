@@ -369,6 +369,13 @@ async function analyzeProduct(productName, userPreferences = {}) {
     // Parse JSON, stripping markdown if present
     const companyData = parseClaudeResponse(text);
 
+    // Check if company is on user's avoid list (double-check client-side)
+    const avoidCheckResult = checkAvoidedBrands(companyData, userPreferences.avoidedBrands || []);
+    if (avoidCheckResult.isOnAvoidList) {
+      companyData.isOnAvoidList = true;
+      companyData.avoidReason = avoidCheckResult.reason;
+    }
+
     // Calculate alignment score using transparent algorithm
     const scoreResult = calculateAlignmentScore(companyData, userPreferences);
 
@@ -382,6 +389,9 @@ async function analyzeProduct(productName, userPreferences = {}) {
 
     console.log('Vinegar API: Parsed analysis:', analysis);
     console.log('Vinegar API: Alignment score:', scoreResult.score, 'Breakdown:', scoreResult.breakdown);
+    if (analysis.isOnAvoidList) {
+      console.log('Vinegar API: ⚠️  AVOIDED BRAND DETECTED:', analysis.avoidReason);
+    }
 
     return analysis;
 
@@ -730,11 +740,50 @@ Return ONLY valid JSON (no markdown, no code blocks):
   "impactExplanation": "Factual, empowering explanation of choosing alternatives (2-3 sentences).",
   "suggestedStoreTypes": ["specific store type"],
   "suggestedStoreNames": ["chain name"],
-  "googlePlacesTypes": ["store"]
+  "googlePlacesTypes": ["store"],
+  "isOnAvoidList": ${avoidedBrands.length > 0 ? `true if "${productName}" parent company "${'{parentCompany}'}" matches any of [${avoidedBrands.join(', ')}] (case-insensitive), else false` : 'false'},
+  "avoidReason": ${avoidedBrands.length > 0 ? '"You\'ve chosen to avoid [Brand Name]" if matched, else ""' : '""'}
 }
+
+${avoidedBrands.length > 0 ? `\nIMPORTANT: Check if parentCompany or any subsidiary matches these avoided brands (case-insensitive): ${avoidedBrands.join(', ')}` : ''}
 
 Important: Provide FACTS only. Be neutral and informative, not preachy. The alignment score will be calculated algorithmically.
 Return ONLY the JSON object, no other text.`;
+}
+
+/**
+ * Check if company matches user's avoided brands
+ */
+function checkAvoidedBrands(companyData, avoidedBrands) {
+  if (!avoidedBrands || avoidedBrands.length === 0) {
+    return { isOnAvoidList: false, reason: '' };
+  }
+
+  const companyName = (companyData.parentCompany || '').toLowerCase();
+  const subsidiaries = (companyData.subsidiaries || []).map(s => s.toLowerCase());
+
+  // Check parent company
+  for (const avoidedBrand of avoidedBrands) {
+    const brandLower = avoidedBrand.toLowerCase();
+    if (companyName.includes(brandLower) || brandLower.includes(companyName.split(' ')[0])) {
+      return {
+        isOnAvoidList: true,
+        reason: `You've chosen to avoid ${avoidedBrand}`
+      };
+    }
+
+    // Check subsidiaries
+    for (const subsidiary of subsidiaries) {
+      if (subsidiary.includes(brandLower) || brandLower.includes(subsidiary.split(' ')[0])) {
+        return {
+          isOnAvoidList: true,
+          reason: `Parent company of ${avoidedBrand} (which you've chosen to avoid)`
+        };
+      }
+    }
+  }
+
+  return { isOnAvoidList: false, reason: '' };
 }
 
 /**

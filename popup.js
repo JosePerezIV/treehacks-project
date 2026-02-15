@@ -492,6 +492,18 @@ function setupEventListeners() {
     });
   }
 
+  // Reset stats button
+  const resetStatsBtn = document.getElementById('reset-stats-btn');
+  if (resetStatsBtn) {
+    resetStatsBtn.addEventListener('click', resetImpactStats);
+    resetStatsBtn.addEventListener('mouseenter', () => {
+      resetStatsBtn.style.background = '#d4dac9';
+    });
+    resetStatsBtn.addEventListener('mouseleave', () => {
+      resetStatsBtn.style.background = '#e8ebe0';
+    });
+  }
+
   // Footer links
   document.getElementById('link-about')?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -514,19 +526,59 @@ function setupEventListeners() {
  */
 async function updateStats() {
   try {
-    const result = await chrome.storage.local.get('stats');
-    const stats = result.stats || {
-      alternativesFound: 0,
-      localSupport: 0,
-      co2Saved: 0
+    const result = await chrome.storage.local.get('impactData');
+    const impact = result.impactData || {
+      alternativesViewed: 0,
+      localEconomySupport: 0,
+      co2Saved: 0,
+      sessionsWithAlternatives: 0,
+      startDate: Date.now()
     };
 
     // Update stat displays with animation
-    animateValue('stat-alternatives', 0, stats.alternativesFound, 1000);
-    animateValue('stat-local', 0, stats.localSupport, 1000, '$');
-    animateValue('stat-co2', 0, stats.co2Saved, 1000, '', ' kg');
+    animateValue('stat-alternatives', 0, impact.alternativesViewed, 1000);
+    animateValue('stat-local', 0, Math.floor(impact.localEconomySupport), 1000, '$');
+    animateValue('stat-co2', 0, parseFloat(impact.co2Saved.toFixed(1)), 1000, '', ' kg');
+
+    // Add tooltips explaining the numbers
+    const altStat = document.getElementById('stat-alternatives');
+    const localStat = document.getElementById('stat-local');
+    const co2Stat = document.getElementById('stat-co2');
+
+    if (altStat) altStat.title = 'Number of times you viewed local alternatives';
+    if (localStat) localStat.title = 'Estimated: Local businesses keep 68% in community vs 43% from chains';
+    if (co2Stat) co2Stat.title = 'Estimated: Buying local reduces shipping emissions by 2-5kg per item';
+
   } catch (error) {
     console.error('Error loading stats:', error);
+  }
+}
+
+/**
+ * Reset impact statistics
+ */
+async function resetImpactStats() {
+  if (!confirm('Are you sure you want to reset your impact statistics? This cannot be undone.')) {
+    return;
+  }
+
+  try {
+    await chrome.storage.local.set({
+      impactData: {
+        alternativesViewed: 0,
+        localEconomySupport: 0,
+        co2Saved: 0,
+        sessionsWithAlternatives: 0,
+        startDate: Date.now()
+      }
+    });
+
+    // Update display
+    await updateStats();
+    showSaveNotification('📊 Impact stats reset');
+  } catch (error) {
+    console.error('Error resetting stats:', error);
+    alert('Failed to reset stats. Please try again.');
   }
 }
 
