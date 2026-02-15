@@ -66,18 +66,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(async analysis => {
         console.log('Vinegar: Analysis successful');
 
-        // Step 2: Find real local alternatives using Google Places
+        // Step 2: Find real local alternatives using Google Places (if enabled)
         let localAlternatives = [];
-        try {
-          localAlternatives = await findLocalAlternatives(
-            analysis.productCategory,
-            request.userPreferences.location,
-            analysis,
-            request.currentSite // Pass current site to exclude it
-          );
-          console.log('Vinegar: Found', localAlternatives.length, 'local alternatives');
-        } catch (placesError) {
-          console.error('Vinegar: Google Places error:', placesError);
+        const supportLocal = request.userPreferences.supportLocal !== false; // Default true
+        if (supportLocal) {
+          try {
+            localAlternatives = await findLocalAlternatives(
+              analysis.productCategory,
+              request.userPreferences.location,
+              analysis,
+              request.currentSite // Pass current site to exclude it
+            );
+            console.log('Vinegar: Found', localAlternatives.length, 'local alternatives');
+          } catch (placesError) {
+            console.error('Vinegar: Google Places error:', placesError);
+          }
+        } else {
+          console.log('Vinegar: Local business search disabled by user preference');
         }
 
         // Step 3: Find small online retailers using web search
@@ -907,22 +912,25 @@ function calculateAlignmentScore(companyData, userPreferences) {
     }
   }
 
-  // Certifications (bonus points)
-  const certifications = companyData.certifications || [];
-  for (const cert of certifications) {
-    const certLower = cert.toLowerCase();
-    if (certLower.includes('b-corp') || certLower.includes('b corp')) {
-      score += 15;
-      breakdown.push({ reason: 'B-Corp certified', change: +15 });
-    } else if (certLower.includes('fair trade')) {
-      score += 10;
-      breakdown.push({ reason: 'Fair Trade certified', change: +10 });
-    } else if (certLower.includes('carbon neutral') || certLower.includes('carbon-neutral')) {
-      score += 5;
-      breakdown.push({ reason: 'Carbon neutral commitment', change: +5 });
-    } else if (certLower.includes('living wage')) {
-      score += 10;
-      breakdown.push({ reason: 'Living wage employer', change: +10 });
+  // Certifications (bonus points) - only if user prefers sustainable products
+  const sustainableProducts = userPreferences.sustainableProducts !== false; // Default true
+  if (sustainableProducts) {
+    const certifications = companyData.certifications || [];
+    for (const cert of certifications) {
+      const certLower = cert.toLowerCase();
+      if (certLower.includes('b-corp') || certLower.includes('b corp')) {
+        score += 15;
+        breakdown.push({ reason: 'B-Corp certified', change: +15 });
+      } else if (certLower.includes('fair trade')) {
+        score += 10;
+        breakdown.push({ reason: 'Fair Trade certified', change: +10 });
+      } else if (certLower.includes('carbon neutral') || certLower.includes('carbon-neutral')) {
+        score += 5;
+        breakdown.push({ reason: 'Carbon neutral commitment', change: +5 });
+      } else if (certLower.includes('living wage')) {
+        score += 10;
+        breakdown.push({ reason: 'Living wage employer', change: +10 });
+      }
     }
   }
 
