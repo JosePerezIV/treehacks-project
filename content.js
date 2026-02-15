@@ -128,15 +128,16 @@ function extractTargetProduct() {
  */
 function extractBestBuyProduct() {
   // First, validate we're on a product page via URL
+  // Best Buy URLs: /product/product-name/SKU (e.g., /product/energizer-max-9v-batteries/J78676CL43)
   const url = window.location.pathname;
-  const isProductPage = /\/site\/.*\/\d+\.p/.test(url);
+  const isProductPage = /\/product\/[^\/]+\/[A-Z0-9]+/.test(url);
 
   if (!isProductPage) {
-    console.log('Vinegar: Not a Best Buy product page (URL check)');
+    console.log('Vinegar: Not a Best Buy product page (URL check failed for:', url);
     return null;
   }
 
-  console.log('Vinegar: Best Buy product page detected via URL');
+  console.log('Vinegar: Best Buy product page detected via URL:', url);
 
   // Debug: Log what elements are available
   console.log('Vinegar: All H1s on page:', document.querySelectorAll('h1'));
