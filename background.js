@@ -859,19 +859,21 @@ function calculateAlignmentScore(companyData, userPreferences) {
     breakdown.push({ reason: 'Co-op or B-Corp structure', change: +15 });
   }
 
-  // User's Avoided Brands
+  // User's Avoided Brands (HARSH PENALTY - essentially zero match)
   const avoidedBrands = userPreferences.avoidedBrands || [];
   const companyName = companyData.parentCompany?.toLowerCase() || '';
 
   for (const avoidedBrand of avoidedBrands) {
     const brandLower = avoidedBrand.toLowerCase();
     if (companyName.includes(brandLower)) {
-      score -= 30;
-      breakdown.push({ reason: `On your avoid list: ${avoidedBrand}`, change: -30 });
+      const penalty = score - 5; // Drop to 5/100 (essentially 0% values match)
+      score = 5;
+      breakdown.push({ reason: `⛔ On your avoid list: ${avoidedBrand}`, change: -penalty });
       break;
     } else if (companyData.subsidiaries?.some(sub => sub.toLowerCase().includes(brandLower))) {
-      score -= 25;
-      breakdown.push({ reason: `Parent company on avoid list: ${avoidedBrand}`, change: -25 });
+      const penalty = score - 10; // Drop to 10/100 for subsidiaries
+      score = 10;
+      breakdown.push({ reason: `⛔ Parent company on avoid list: ${avoidedBrand}`, change: -penalty });
       break;
     }
   }
