@@ -679,7 +679,7 @@ function showAnalysisError(message) {
 /**
  * Load and display ethical alternatives
  */
-function loadAlternatives(data) {
+async function loadAlternatives(data) {
   console.log('Vinegar: Loading alternatives');
 
   const alternativesList = document.getElementById('alternatives-list');
@@ -690,35 +690,58 @@ function loadAlternatives(data) {
     return;
   }
 
+  // Check if location is set
+  const settings = await chrome.storage.sync.get('settings');
+  const hasLocation = settings.settings?.location?.lat && settings.settings?.location?.lon;
+
+  if (!hasLocation) {
+    // Show prompt to set location instead of fake alternatives
+    alternativesList.innerHTML = `
+      <div style="padding: 24px; text-align: center; background: linear-gradient(135deg, #f5f7f0 0%, #e8ebe0 100%); border-radius: 12px; border: 2px dashed #7ba05b;">
+        <div style="font-size: 48px; margin-bottom: 12px;">📍</div>
+        <div style="font-size: 16px; font-weight: 600; color: #2d4a2b; margin-bottom: 8px;">
+          Set Your Location to Find Local Alternatives
+        </div>
+        <div style="font-size: 14px; color: #6b8e5f; margin-bottom: 16px; line-height: 1.5;">
+          We'll show you real local businesses nearby that sell this product, so you can support your community instead of big box retailers.
+        </div>
+        <button id="open-location-settings" style="
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #7ba05b 0%, #5d7e47 100%);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+          transition: transform 0.2s;
+        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+          📍 Set Location Now
+        </button>
+      </div>
+    `;
+
+    // Add click handler for button
+    const btn = document.getElementById('open-location-settings');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        // Open the extension popup
+        chrome.runtime.sendMessage({ action: 'openPopup' });
+      });
+    }
+
+    console.log('Vinegar: Location not set - showing prompt');
+    return;
+  }
+
   // Show loading state
   if (loadingState) loadingState.style.display = 'block';
 
-  // Simulate loading
+  // Wait for API response (real alternatives will replace this if found)
   setTimeout(() => {
     if (loadingState) loadingState.style.display = 'none';
-
-    // Generate mock alternatives
-    const alternatives = generateMockAlternatives(data);
-    currentAlternatives = alternatives; // Store for map use
-
-    // Clear existing
-    alternativesList.innerHTML = '';
-
-    // Add alternatives
-    alternatives.forEach((alt, index) => {
-      const card = createAlternativeCard(alt);
-      alternativesList.appendChild(card);
-
-      // Stagger animation
-      setTimeout(() => {
-        card.classList.add('vinegar-fade-in');
-      }, index * 100);
-    });
-
-    console.log('Vinegar: Alternatives loaded');
-
-    // Setup map button
-    setupMapButton();
+    console.log('Vinegar: Waiting for real alternatives from API...');
   }, 1000);
 }
 
@@ -802,10 +825,19 @@ function displayRealAlternatives(localAlternatives, alternativeTypes) {
 
   // Show message if no local alternatives found
   if (localAlternatives.length === 0) {
-    const noLocalMsg = document.createElement('div');
-    noLocalMsg.style.cssText = 'padding: 16px; text-align: center; color: var(--text-medium); font-size: 13px; background: var(--bg-secondary); border-radius: 8px; margin-bottom: 16px;';
-    noLocalMsg.innerHTML = '📍 No local stores found nearby. Check out these sustainable online retailers:';
-    alternativesList.appendChild(noLocalMsg);
+    alternativesList.innerHTML = `
+      <div style="padding: 24px; text-align: center; background: #f5f7f0; border-radius: 12px;">
+        <div style="font-size: 42px; margin-bottom: 12px;">🔍</div>
+        <div style="font-size: 16px; font-weight: 600; color: #2d4a2b; margin-bottom: 8px;">
+          No Local Alternatives Found Nearby
+        </div>
+        <div style="font-size: 13px; color: #6b8e5f; line-height: 1.5;">
+          We couldn't find any independent local stores that sell this product in your area.
+          Try searching online or checking local specialty shops directly.
+        </div>
+      </div>
+    `;
+    return; // Don't show online alternatives either
   }
 
   // Display alternatives
@@ -1149,12 +1181,15 @@ function createAlternativeCard(alt) {
 
   // For real local stores (from Google Places)
   if (alt.isReal) {
+    // Safeguard against "undefined" text
+    const address = (alt.address && alt.address !== 'undefined' && alt.address !== 'null') ? alt.address : null;
+
     card.innerHTML = `
       <div class="alt-header">
         <h4 class="alt-name">${alt.name}</h4>
         <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
       </div>
-      ${alt.address ? `<div class="alt-address" style="font-size: 12px; color: #666; margin: 4px 0;">${alt.address}</div>` : ''}
+      ${address ? `<div class="alt-address" style="font-size: 12px; color: #666; margin: 4px 0;">${address}</div>` : ''}
       ${alt.distanceLabel && alt.travelTimeLabel ? `<div style="font-size: 11px; color: #7ba05b; margin: 6px 0; font-weight: 500;">📍 ${alt.distanceLabel} • ${alt.travelTimeLabel} drive</div>` : distanceBadge || ''}
       <div class="alt-details">
         <div class="alt-rating">

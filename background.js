@@ -566,6 +566,16 @@ function filterAndScorePlaces(places, productCategory, analysis, currentSite = n
   const categoryLower = productCategory.toLowerCase();
   const currentSiteLower = currentSite ? currentSite.toLowerCase() : '';
 
+  // Big box retailers to ALWAYS filter out (the whole point is avoiding these!)
+  const bigBoxRetailers = [
+    'walmart', 'target', 'best buy', 'bestbuy', 'amazon',
+    'home depot', 'homedepot', "lowe's", 'lowes', 'costco',
+    'sam\'s club', 'sams club', 'bj\'s', 'bjs wholesale',
+    'kohls', "kohl's", 'jcpenney', 'jc penney', 'sears',
+    'macy\'s', 'macys', 'dick\'s sporting goods', 'dicks sporting goods',
+    'staples', 'office depot', 'petsmart', 'petco', 'cvs', 'walgreens'
+  ];
+
   // Irrelevant types to filter out
   const irrelevantTypes = [
     'library', 'school', 'university', 'hospital', 'church', 'mosque',
@@ -602,6 +612,15 @@ function filterAndScorePlaces(places, productCategory, analysis, currentSite = n
         const placeName = (place.displayName?.text || '').toLowerCase();
         if (placeName.includes(currentSiteLower) || currentSiteLower.includes(placeName.split(' ')[0])) {
           console.log('Filtered out', place.displayName?.text, '- current retailer');
+          return false;
+        }
+      }
+
+      // CRITICAL: Filter out ALL big box retailers (the point is to avoid them!)
+      const placeName = (place.displayName?.text || '').toLowerCase();
+      for (const retailer of bigBoxRetailers) {
+        if (placeName.includes(retailer)) {
+          console.log('Filtered out', place.displayName?.text, '- big box retailer');
           return false;
         }
       }
