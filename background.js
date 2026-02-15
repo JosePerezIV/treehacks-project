@@ -61,9 +61,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Vinegar: CONFIG available?', typeof CONFIG !== 'undefined');
     console.log('Vinegar: API key available?', typeof CONFIG !== 'undefined' && CONFIG.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
+    // Step 1: Analyze with Claude
     analyzeProduct(request.productName, request.userPreferences)
-      .then(analysis => {
-        console.log('Vinegar: Analysis successful, sending response');
+      .then(async analysis => {
+        console.log('Vinegar: Analysis successful');
+
+        // Step 2: Find real local alternatives using Google Places
+        try {
+          const localAlternatives = await findLocalAlternatives(
+            analysis.productCategory,
+            request.userPreferences.location,
+            analysis.suggestedStoreKeywords || []
+          );
+
+          // Add local alternatives to the response
+          analysis.localAlternatives = localAlternatives;
+          console.log('Vinegar: Found', localAlternatives.length, 'local alternatives');
+        } catch (placesError) {
+          console.error('Vinegar: Google Places error:', placesError);
+          analysis.localAlternatives = [];
+        }
+
+        console.log('Vinegar: Sending complete response');
         sendResponse(analysis);
       })
       .catch(error => {
@@ -365,6 +384,82 @@ async function analyzeProduct(productName, userPreferences = {}) {
     }
 
     throw error;
+  }
+}
+
+/**
+ * Find real local alternatives using Google Places API
+ */
+async function findLocalAlternatives(productCategory, userLocation, keywords) {
+  console.log('Finding local alternatives:', { productCategory, userLocation, keywords });
+
+  if (!userLocation || !userLocation.lat || !userLocation.lon) {
+    console.log('No user location available, skipping Google Places search');
+    return [];
+  }
+
+  if (!CONFIG.GOOGLE_PLACES_API_KEY) {
+    console.error('Google Places API key not configured');
+    return [];
+  }
+
+  try {
+    const alternatives = [];
+
+    // Try searching with each keyword
+    for (const keyword of keywords.slice(0, 3)) { // Limit to first 3 keywords
+      const searchQuery = `${keyword} ${productCategory}`;
+      console.log('Searching Google Places for:', searchQuery);
+
+      const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
+      url.searchParams.append('location', `${userLocation.lat},${userLocation.lon}`);
+      url.searchParams.append('radius', '8000'); // 5 miles in meters
+      url.searchParams.append('keyword', searchQuery);
+      url.searchParams.append('type', 'store');
+      url.searchParams.append('key', CONFIG.GOOGLE_PLACES_API_KEY);
+
+      console.log('Google Places URL:', url.toString());
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        console.error('Google Places API error:', response.status, response.statusText);
+        continue;
+      }
+
+      const data = await response.json();
+      console.log('Google Places response:', data);
+
+      if (data.status === 'OK' && data.results) {
+        // Add results to alternatives
+        for (const place of data.results.slice(0, 3)) { // Max 3 per keyword
+          alternatives.push({
+            name: place.name,
+            address: place.vicinity,
+            rating: place.rating || 0,
+            lat: place.geometry.location.lat,
+            lon: place.geometry.location.lng,
+            placeId: place.place_id,
+            type: 'local',
+            typeLabel: 'Local Business',
+            isReal: true, // Flag to indicate this is real data
+            googleMapsUrl: `https://www.google.com/maps/place/?q=place_id:${place.place_id}`
+          });
+        }
+      } else {
+        console.log('Google Places status:', data.status, data.error_message);
+      }
+
+      // Break if we have enough alternatives
+      if (alternatives.length >= 5) break;
+    }
+
+    console.log('Found local alternatives:', alternatives.length);
+    return alternatives;
+
+  } catch (error) {
+    console.error('Error finding local alternatives:', error);
+    return [];
   }
 }
 

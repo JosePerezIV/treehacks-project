@@ -12,7 +12,8 @@
     "https://*.walmart.com/*",
     "https://*.target.com/*",
     "https://*.bestbuy.com/*",
-    "https://api.anthropic.com/*"
+    "https://api.anthropic.com/*",
+    "https://maps.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"

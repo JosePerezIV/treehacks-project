@@ -323,6 +323,13 @@ async function analyzeProductWithAPI(data) {
         // Update UI with results
         updateCompanyAnalysis(response);
         updateCostBenefitAnalysis(response.costBenefitAnalysis);
+
+        // If we have real local alternatives, use them
+        if (response.localAlternatives && response.localAlternatives.length > 0) {
+          console.log('Vinegar: Using real local alternatives from Google Places');
+          displayRealAlternatives(response.localAlternatives, response.alternativeTypes);
+        }
+
         console.log('Vinegar: API analysis complete');
       }
     });
@@ -480,6 +487,74 @@ function loadAlternatives(data) {
     // Setup map button
     setupMapButton();
   }, 1000);
+}
+
+/**
+ * Display real alternatives from Google Places API
+ */
+function displayRealAlternatives(localAlternatives, alternativeTypes) {
+  console.log('Vinegar: Displaying real alternatives from Google Places');
+
+  const alternativesList = document.getElementById('alternatives-list');
+  if (!alternativesList) return;
+
+  // Calculate distances for local alternatives
+  if (userLocation && typeof calculateDistance === 'function') {
+    localAlternatives.forEach(alt => {
+      alt.distance = calculateDistance(userLocation.lat, userLocation.lon, alt.lat, alt.lon);
+      alt.distanceLabel = formatDistance(alt.distance);
+      alt.distanceCategory = categorizeDistance(alt.distance);
+      alt.distanceBonus = getDistanceBonus(alt.distance);
+    });
+
+    // Sort by distance (closest first)
+    localAlternatives.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+  }
+
+  // Add a couple of online sustainable alternatives
+  const onlineAlternatives = [
+    {
+      name: 'Sustainable Online Alternative',
+      type: 'sustainable',
+      typeLabel: 'Sustainable',
+      features: ['Carbon neutral shipping', 'Eco-friendly materials', 'B-Corp certified'],
+      rating: 4.6,
+      url: '#',
+      isReal: false
+    },
+    {
+      name: 'Fair Trade Online Shop',
+      type: 'ethical',
+      typeLabel: 'Fair Trade',
+      features: ['Worker-owned', 'Ethical sourcing', 'Living wages'],
+      rating: 4.7,
+      url: '#',
+      isReal: false
+    }
+  ];
+
+  // Combine: local alternatives first, then online
+  const allAlternatives = [...localAlternatives, ...onlineAlternatives.slice(0, 2)];
+  currentAlternatives = allAlternatives; // Store for map use
+
+  // Clear existing
+  alternativesList.innerHTML = '';
+
+  // Display alternatives
+  allAlternatives.forEach((alt, index) => {
+    const card = createAlternativeCard(alt);
+    alternativesList.appendChild(card);
+
+    // Stagger animation
+    setTimeout(() => {
+      card.classList.add('vinegar-fade-in');
+    }, index * 100);
+  });
+
+  console.log('Vinegar: Displayed', allAlternatives.length, 'alternatives');
+
+  // Setup map button
+  setupMapButton();
 }
 
 /**
@@ -800,27 +875,52 @@ function createAlternativeCard(alt) {
     distanceBadge = `<span class="distance-badge ${badgeClass}">📍 ${alt.distanceLabel}</span>`;
   }
 
-  card.innerHTML = `
-    <div class="alt-header">
-      <h4 class="alt-name">${alt.name}</h4>
-      <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
-    </div>
-    <div class="alt-details">
-      <div class="alt-price">${alt.price}</div>
-      <div class="alt-rating">
-        <span class="stars">${stars}</span>
-        <span class="rating-value">${alt.rating}/5</span>
+  // For real local stores (from Google Places)
+  if (alt.isReal) {
+    card.innerHTML = `
+      <div class="alt-header">
+        <h4 class="alt-name">${alt.name}</h4>
+        <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
       </div>
-    </div>
-    ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
-    <div class="alt-features">
-      ${alt.features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
-    </div>
-    <div class="alt-actions">
-      <a href="${alt.url}" target="_blank" class="alt-button primary">Visit Store</a>
-      <button class="alt-button secondary">Save</button>
-    </div>
-  `;
+      ${alt.address ? `<div class="alt-address" style="font-size: 12px; color: var(--text-medium); margin: 8px 0;">${alt.address}</div>` : ''}
+      <div class="alt-details">
+        <div class="alt-rating">
+          <span class="stars">${stars}</span>
+          <span class="rating-value">${alt.rating.toFixed(1)}/5</span>
+        </div>
+      </div>
+      ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
+      <div class="alt-actions" style="gap: 8px;">
+        <a href="${alt.googleMapsUrl}" target="_blank" class="alt-button primary" style="flex: 1;">
+          🗺️ Directions
+        </a>
+        <button class="alt-button secondary" style="flex: 0; padding: 0 12px;">💾</button>
+      </div>
+    `;
+  } else {
+    // For online alternatives (mock or sustainable options)
+    card.innerHTML = `
+      <div class="alt-header">
+        <h4 class="alt-name">${alt.name}</h4>
+        <span class="alt-badge ${alt.type}">${alt.typeLabel}</span>
+      </div>
+      <div class="alt-details">
+        ${alt.price ? `<div class="alt-price">${alt.price}</div>` : ''}
+        <div class="alt-rating">
+          <span class="stars">${stars}</span>
+          <span class="rating-value">${alt.rating}/5</span>
+        </div>
+      </div>
+      ${distanceBadge ? `<div class="alt-distance">${distanceBadge}</div>` : ''}
+      ${alt.features ? `<div class="alt-features">
+        ${alt.features.map(f => `<span class="feature-tag">${f}</span>`).join('')}
+      </div>` : ''}
+      <div class="alt-actions">
+        <a href="${alt.url}" target="_blank" class="alt-button primary">Visit Store</a>
+        <button class="alt-button secondary">Save</button>
+      </div>
+    `;
+  }
 
   return card;
 }
