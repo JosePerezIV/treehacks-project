@@ -469,6 +469,20 @@
   font-weight: 500;
 }
 
+.benefit-text-full {
+  font-size: 14px;
+  color: var(--text-dark);
+  line-height: 1.6;
+  font-weight: 400;
+  flex: 1;
+}
+
+.impact-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 /* Map Section */
 .toggle-map-btn {
   width: 100%;

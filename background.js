@@ -904,6 +904,9 @@ function parseClaudeResponse(text) {
     parsed.companySize = parsed.companySize || 'unknown';
     parsed.ownershipType = parsed.ownershipType || 'unknown';
 
+    // Validate and clean up data to catch hallucinations
+    validateAndCleanData(parsed);
+
     return parsed;
 
   } catch (error) {
@@ -911,4 +914,70 @@ function parseClaudeResponse(text) {
     console.error('Vinegar API: Raw text:', text);
     throw new Error('PARSE_ERROR');
   }
+}
+
+/**
+ * Validate data to catch potential hallucinations
+ */
+function validateAndCleanData(data) {
+  const currentYear = new Date().getFullYear();
+
+  // Validate factual concerns for suspicious patterns
+  if (data.factualConcerns && Array.isArray(data.factualConcerns)) {
+    data.factualConcerns = data.factualConcerns.filter(concern => {
+      if (typeof concern !== 'string') return false;
+
+      // Check for year patterns (should be 1800-current year)
+      const yearMatch = concern.match(/\b(19|20)\d{2}\b/);
+      if (yearMatch) {
+        const year = parseInt(yearMatch[0]);
+        if (year < 1800 || year > currentYear) {
+          console.warn('Suspicious year in concern:', concern);
+          return false; // Filter out concerns with invalid dates
+        }
+      }
+
+      // Check for obvious placeholder or repetitive text
+      if (concern.includes('example') || concern.includes('placeholder')) {
+        console.warn('Placeholder text detected:', concern);
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  // Validate impactExplanation
+  if (data.impactExplanation && typeof data.impactExplanation === 'string') {
+    // Check for suspicious patterns
+    const words = data.impactExplanation.toLowerCase().split(/\s+/);
+    const uniqueWords = new Set(words);
+
+    // If more than 50% words are repeated, might be hallucination
+    if (words.length > 10 && uniqueWords.size / words.length < 0.5) {
+      console.warn('Suspicious repetitive text in impactExplanation');
+      data.impactExplanation = 'Exploring alternatives helps support diverse business ownership and strengthens local economies.';
+    }
+
+    // Check for year references in explanation
+    const yearMatch = data.impactExplanation.match(/\b(19|20)\d{2}\b/g);
+    if (yearMatch) {
+      for (const yearStr of yearMatch) {
+        const year = parseInt(yearStr);
+        if (year < 1800 || year > currentYear) {
+          console.warn('Suspicious year in impactExplanation:', yearStr);
+          // Don't completely reject, but log warning
+        }
+      }
+    }
+  }
+
+  // Ensure parent company name is reasonable (no special characters except &, -, .)
+  if (data.parentCompany && typeof data.parentCompany === 'string') {
+    if (!/^[a-zA-Z0-9\s&\-\.]+$/.test(data.parentCompany)) {
+      console.warn('Suspicious parent company name:', data.parentCompany);
+    }
+  }
+
+  return data;
 }

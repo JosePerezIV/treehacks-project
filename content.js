@@ -126,14 +126,50 @@ function extractTargetProduct() {
  * Extract product data from Best Buy
  */
 function extractBestBuyProduct() {
-  const titleElement = document.querySelector('.sku-title h1, [class*="ProductTitle"]');
-  const priceElement = document.querySelector('[class*="priceView-customer-price"] span[aria-hidden="true"]');
+  // Try multiple selectors for title (BestBuy changes their layout)
+  const titleSelectors = [
+    '.sku-title h1',
+    'h1.heading-5',
+    '[class*="ProductTitle"]',
+    'div[class*="sku-title"] h1',
+    'h1[data-testid="product-title"]',
+    '.product-title h1'
+  ];
 
-  if (!titleElement) return null;
+  let titleElement = null;
+  for (const selector of titleSelectors) {
+    titleElement = document.querySelector(selector);
+    if (titleElement && titleElement.textContent.trim()) break;
+  }
+
+  if (!titleElement || !titleElement.textContent.trim()) {
+    console.log('Vinegar: Could not find Best Buy product title');
+    return null;
+  }
+
+  // Try multiple selectors for price
+  const priceSelectors = [
+    '[class*="priceView-customer-price"] span[aria-hidden="true"]',
+    '.priceView-hero-price span[aria-hidden="true"]',
+    '[data-testid="customer-price"]',
+    '.pricing-price__regular-price',
+    'div[class*="priceView"] span:first-child'
+  ];
+
+  let priceElement = null;
+  for (const selector of priceSelectors) {
+    priceElement = document.querySelector(selector);
+    if (priceElement && priceElement.textContent.trim()) break;
+  }
+
+  const productName = titleElement.textContent.trim();
+  const productPrice = priceElement ? priceElement.textContent.trim() : 'Price not available';
+
+  console.log('Vinegar: Extracted Best Buy product:', { productName, productPrice });
 
   return {
-    name: titleElement.textContent.trim(),
-    price: priceElement ? priceElement.textContent.trim() : 'Price not available',
+    name: productName,
+    price: productPrice,
     site: 'Best Buy',
     url: window.location.href
   };
@@ -459,24 +495,53 @@ function updateCostBenefitAnalysis(analysisText) {
   const costBenefit = document.getElementById('cost-benefit');
   if (!costBenefit) return;
 
-  costBenefit.innerHTML = `
-    <div class="benefit-item">
-      <span class="benefit-icon">💡</span>
-      <span class="benefit-text">${analysisText}</span>
-    </div>
-    <div class="benefit-item">
-      <span class="benefit-icon">💰</span>
-      <span class="benefit-text">Supports local economy</span>
-    </div>
-    <div class="benefit-item">
-      <span class="benefit-icon">🌱</span>
-      <span class="benefit-text">Often reduces shipping distance</span>
-    </div>
-    <div class="benefit-item">
-      <span class="benefit-icon">🤝</span>
-      <span class="benefit-text">Fair labor practices</span>
-    </div>
-  `;
+  // Validate and clean the analysis text
+  let cleanText = analysisText;
+
+  // Check for hallucination patterns and clean them up
+  if (!cleanText || cleanText === 'undefined' || cleanText === 'null') {
+    cleanText = 'Exploring alternatives helps support diverse business ownership and local economies.';
+  }
+
+  // Remove any JSON artifacts
+  cleanText = cleanText.replace(/[{}\[\]]/g, '');
+
+  // Split into sentences for better formatting
+  const sentences = cleanText.split(/\.\s+/).filter(s => s.trim());
+
+  // Format as clean paragraphs (group 2-3 sentences each)
+  let formattedHTML = '<div class="impact-analysis">';
+
+  if (sentences.length <= 3) {
+    // Short analysis - show as single paragraph
+    formattedHTML += `
+      <div class="benefit-item">
+        <span class="benefit-icon">💡</span>
+        <div class="benefit-text-full">
+          ${sentences.map(s => s.trim() + (s.endsWith('.') ? '' : '.')).join(' ')}
+        </div>
+      </div>
+    `;
+  } else {
+    // Longer analysis - split into multiple sections
+    const midpoint = Math.ceil(sentences.length / 2);
+    const firstHalf = sentences.slice(0, midpoint).map(s => s.trim() + (s.endsWith('.') ? '' : '.')).join(' ');
+    const secondHalf = sentences.slice(midpoint).map(s => s.trim() + (s.endsWith('.') ? '' : '.')).join(' ');
+
+    formattedHTML += `
+      <div class="benefit-item">
+        <span class="benefit-icon">💡</span>
+        <div class="benefit-text-full">${firstHalf}</div>
+      </div>
+      <div class="benefit-item">
+        <span class="benefit-icon">📊</span>
+        <div class="benefit-text-full">${secondHalf}</div>
+      </div>
+    `;
+  }
+
+  formattedHTML += '</div>';
+  costBenefit.innerHTML = formattedHTML;
 }
 
 /**
