@@ -130,7 +130,7 @@ async function handleProductDetected(productData, sender) {
     await chrome.storage.local.set({ stats });
 
     // Update badge to show extension is active
-    if (sender.tab?.id) {
+    if (sender.tab?.id && typeof sender.tab.id === 'number' && sender.tab.id > 0 && sender.tab.id < 2147483647) {
       try {
         // Verify tab exists before setting badge
         await chrome.tabs.get(sender.tab.id);
@@ -144,8 +144,8 @@ async function handleProductDetected(productData, sender) {
           tabId: sender.tab.id
         });
       } catch (tabError) {
-        // Tab might have been closed or doesn't exist
-        console.log('Could not set badge for tab:', sender.tab.id, tabError.message);
+        // Tab might have been closed or doesn't exist - silently ignore
+        // (This is expected behavior when tabs are closed quickly)
       }
     }
   } catch (error) {
