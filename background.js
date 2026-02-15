@@ -36,9 +36,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // Initialize stats
     chrome.storage.local.set({
       stats: {
-        alternativesFound: 0,
-        localSupport: 0,
-        co2Saved: 0
+        alternativesFound: 0
       }
     });
 
@@ -154,15 +152,11 @@ async function handleProductDetected(productData, sender) {
   try {
     const result = await chrome.storage.local.get('stats');
     const stats = result.stats || {
-      alternativesFound: 0,
-      localSupport: 0,
-      co2Saved: 0
+      alternativesFound: 0
     };
 
     // Increment alternatives found
     stats.alternativesFound += 3; // Mock: 3 alternatives per product
-    stats.localSupport += Math.floor(Math.random() * 50) + 10; // Mock local support amount
-    stats.co2Saved += Math.floor(Math.random() * 5) + 1; // Mock CO2 saved
 
     await chrome.storage.local.set({ stats });
 
@@ -262,9 +256,7 @@ async function getStats() {
   try {
     const result = await chrome.storage.local.get('stats');
     return result.stats || {
-      alternativesFound: 0,
-      localSupport: 0,
-      co2Saved: 0
+      alternativesFound: 0
     };
   } catch (error) {
     console.error('Error getting stats:', error);

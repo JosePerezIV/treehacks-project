@@ -1285,39 +1285,13 @@ async function updateImpactStats(productPrice, alternativesCount, closestDistanc
     const result = await chrome.storage.local.get('impactData');
     const impact = result.impactData || {
       alternativesViewed: 0,
-      localEconomySupport: 0,
-      co2Saved: 0,
       sessionsWithAlternatives: 0,
       startDate: Date.now()
     };
 
-    // Parse price (remove $ and convert to number)
-    let priceValue = 0;
-    if (productPrice && typeof productPrice === 'string') {
-      const priceMatch = productPrice.match(/[\d,]+\.?\d*/);
-      if (priceMatch) {
-        priceValue = parseFloat(priceMatch[0].replace(/,/g, ''));
-      }
-    }
-
-    // Update counters
+    // Update counters - just track alternatives viewed
     impact.alternativesViewed += alternativesCount || 0;
     impact.sessionsWithAlternatives += 1;
-
-    // Estimate local economy support
-    // Assumption: Local businesses keep 68% vs chains at 43% = 25% difference
-    if (priceValue > 0) {
-      const economicImpact = priceValue * 0.25; // 25% difference
-      impact.localEconomySupport += economicImpact;
-    }
-
-    // Estimate CO2 saved
-    // Assumption: Average shipping is ~1000 miles, local is <10 miles
-    // Typical e-commerce generates ~2-5kg CO2 per shipment
-    if (closestDistance && closestDistance < 50) { // If closest store is within 50 miles
-      const co2Reduction = 3.5; // Average 3.5kg CO2 saved per local purchase
-      impact.co2Saved += co2Reduction;
-    }
 
     // Save updated stats
     await chrome.storage.local.set({ impactData: impact });

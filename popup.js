@@ -529,25 +529,16 @@ async function updateStats() {
     const result = await chrome.storage.local.get('impactData');
     const impact = result.impactData || {
       alternativesViewed: 0,
-      localEconomySupport: 0,
-      co2Saved: 0,
       sessionsWithAlternatives: 0,
       startDate: Date.now()
     };
 
-    // Update stat displays with animation
+    // Update stat display with animation
     animateValue('stat-alternatives', 0, impact.alternativesViewed, 1000);
-    animateValue('stat-local', 0, Math.floor(impact.localEconomySupport), 1000, '$');
-    animateValue('stat-co2', 0, parseFloat(impact.co2Saved.toFixed(1)), 1000, '', ' kg');
 
-    // Add tooltips explaining the numbers
+    // Add tooltip explaining the number
     const altStat = document.getElementById('stat-alternatives');
-    const localStat = document.getElementById('stat-local');
-    const co2Stat = document.getElementById('stat-co2');
-
-    if (altStat) altStat.title = 'Number of times you viewed local alternatives';
-    if (localStat) localStat.title = 'Estimated: Local businesses keep 68% in community vs 43% from chains';
-    if (co2Stat) co2Stat.title = 'Estimated: Buying local reduces shipping emissions by 2-5kg per item';
+    if (altStat) altStat.title = 'Number of alternative products you\'ve explored';
 
   } catch (error) {
     console.error('Error loading stats:', error);
@@ -566,8 +557,6 @@ async function resetImpactStats() {
     await chrome.storage.local.set({
       impactData: {
         alternativesViewed: 0,
-        localEconomySupport: 0,
-        co2Saved: 0,
         sessionsWithAlternatives: 0,
         startDate: Date.now()
       }
