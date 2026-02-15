@@ -1231,12 +1231,18 @@ function createAlternativeCard(alt) {
     const priceDisplay = alt.priceDisplay || alt.price || 'Visit site for pricing';
     const showPrice = alt.price && alt.price !== 'null' && alt.price !== 'undefined';
 
+    // Truncate description to 150 characters
+    let description = alt.description || '';
+    if (description.length > 150) {
+      description = description.substring(0, 150).trim() + '...';
+    }
+
     card.innerHTML = `
       <div class="alt-header">
         <h4 class="alt-name">${alt.name}</h4>
         <span class="alt-badge small-business">SMALL BUSINESS</span>
       </div>
-      ${alt.description ? `<div style="font-size: 12px; color: #666; margin: 4px 0; line-height: 1.4;">${alt.description}</div>` : ''}
+      ${description ? `<div style="font-size: 12px; color: #666; margin: 4px 0; line-height: 1.4;">${description}</div>` : ''}
       <div class="alt-details" style="margin-top: 8px;">
         ${showPrice ? `<div class="alt-price" style="font-size: 18px; font-weight: 700; color: #2d4a2b;">${alt.price}</div>` : `<div style="font-size: 13px; color: #7ba05b;">💰 ${priceDisplay}</div>`}
         <div style="font-size: 12px; color: #6b8e5f; margin-top: 4px;">✓ ${alt.availability || 'Check website'}</div>
