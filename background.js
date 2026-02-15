@@ -400,6 +400,34 @@ async function analyzeProduct(productName, userPreferences = {}) {
 }
 
 /**
+ * Determine search radius based on location (urban/suburban/rural heuristic)
+ */
+function determineSearchRadius(userLocation) {
+  // Major US cities (rough lat/lon bounds) - use smaller radius
+  const majorCities = [
+    { name: 'SF Bay Area', latMin: 37.2, latMax: 37.9, lonMin: -122.6, lonMax: -121.7, radius: 5000 },
+    { name: 'NYC', latMin: 40.5, latMax: 40.9, lonMin: -74.3, lonMax: -73.7, radius: 5000 },
+    { name: 'LA', latMin: 33.7, latMax: 34.3, lonMin: -118.7, lonMax: -118.1, radius: 5000 },
+    { name: 'Chicago', latMin: 41.6, latMax: 42.0, lonMin: -87.9, lonMax: -87.5, radius: 5000 },
+    { name: 'Boston', latMin: 42.2, latMax: 42.5, lonMin: -71.3, lonMax: -70.9, radius: 5000 },
+    { name: 'Seattle', latMin: 47.4, latMax: 47.8, lonMin: -122.5, lonMax: -122.2, radius: 5000 },
+  ];
+
+  // Check if user is in a major city
+  for (const city of majorCities) {
+    if (userLocation.lat >= city.latMin && userLocation.lat <= city.latMax &&
+        userLocation.lon >= city.lonMin && userLocation.lon <= city.lonMax) {
+      console.log(`User in ${city.name} - using urban radius: ${city.radius}m`);
+      return city.radius;
+    }
+  }
+
+  // Default: suburban radius
+  console.log('User in suburban/rural area - using larger radius: 10000m');
+  return 10000; // ~6 miles
+}
+
+/**
  * Find real local alternatives using Google Places API (New)
  */
 async function findLocalAlternatives(productCategory, userLocation, analysis) {
@@ -419,11 +447,14 @@ async function findLocalAlternatives(productCategory, userLocation, analysis) {
     const allPlaces = [];
     const seenPlaceIds = new Set();
 
+    // Determine search radius based on location
+    const searchRadius = determineSearchRadius(userLocation);
+
     // Strategy 1: Search by specific store types from Claude
     const storeTypes = analysis.suggestedStoreTypes || [];
     for (const storeType of storeTypes.slice(0, 2)) {
       console.log('Strategy 1: Searching by store type:', storeType);
-      const places = await searchPlacesByType(userLocation, storeType, analysis.googlePlacesTypes);
+      const places = await searchPlacesByType(userLocation, storeType, analysis.googlePlacesTypes, searchRadius);
       addUniquePlaces(allPlaces, places, seenPlaceIds);
     }
 
@@ -431,14 +462,14 @@ async function findLocalAlternatives(productCategory, userLocation, analysis) {
     const storeNames = analysis.suggestedStoreNames || [];
     for (const storeName of storeNames.slice(0, 2)) {
       console.log('Strategy 2: Searching by store name:', storeName);
-      const places = await searchPlacesByName(userLocation, storeName);
+      const places = await searchPlacesByName(userLocation, storeName, searchRadius);
       addUniquePlaces(allPlaces, places, seenPlaceIds);
     }
 
     // Strategy 3: Generic search by product category if we don't have enough
     if (allPlaces.length < 3 && productCategory) {
       console.log('Strategy 3: Generic search by category:', productCategory);
-      const places = await searchPlacesByType(userLocation, productCategory, ['store']);
+      const places = await searchPlacesByType(userLocation, productCategory, ['store'], searchRadius);
       addUniquePlaces(allPlaces, places, seenPlaceIds);
     }
 
@@ -457,7 +488,7 @@ async function findLocalAlternatives(productCategory, userLocation, analysis) {
 /**
  * Search places by type/keyword
  */
-async function searchPlacesByType(userLocation, searchTerm, includedTypes = ['store']) {
+async function searchPlacesByType(userLocation, searchTerm, includedTypes = ['store'], searchRadius = 8000) {
   const url = 'https://places.googleapis.com/v1/places:searchText';
 
   const requestBody = {
@@ -468,7 +499,7 @@ async function searchPlacesByType(userLocation, searchTerm, includedTypes = ['st
           latitude: userLocation.lat,
           longitude: userLocation.lon
         },
-        radius: 8000.0
+        radius: searchRadius
       }
     },
     maxResultCount: 10
@@ -501,8 +532,8 @@ async function searchPlacesByType(userLocation, searchTerm, includedTypes = ['st
 /**
  * Search places by specific name
  */
-async function searchPlacesByName(userLocation, storeName) {
-  return await searchPlacesByType(userLocation, storeName, []);
+async function searchPlacesByName(userLocation, storeName, searchRadius = 8000) {
+  return await searchPlacesByType(userLocation, storeName, [], searchRadius);
 }
 
 /**
@@ -602,11 +633,25 @@ function buildAnalysisPrompt(productName, userPreferences) {
   const avoidedBrands = userPreferences.avoidedBrands || [];
   const location = userPreferences.location || null;
 
-  return `You are analyzing a product for ethical shopping purposes. The user is considering buying: "${productName}"
+  // Build detailed location context
+  let locationContext = 'Not provided';
+  if (location && location.lat && location.lon) {
+    locationContext = `${location.display} (${location.lat.toFixed(4)}, ${location.lon.toFixed(4)})`;
+  }
 
-User's preferences:
+  return `You are analyzing a product for shopping insights. The user is considering buying: "${productName}"
+
+User's context:
 - Brands to avoid: ${avoidedBrands.length > 0 ? avoidedBrands.join(', ') : 'None specified'}
-- Location: ${location ? `${location.display}` : 'Not provided'}
+- Location: ${locationContext}
+
+${location ? `
+IMPORTANT: The user is in ${location.display}. Make your analysis location-aware:
+- Reference ${location.display}'s local economy in your impact explanation
+- Mention specific benefits to the ${location.display} area economy
+- Use real estimates: "keeps approximately $X in the local ${location.display} economy"
+- Be specific and local, not generic
+` : ''}
 
 Analyze this product and provide FACTUAL information (do NOT calculate a score):
 
@@ -755,10 +800,29 @@ function calculateAlignmentScore(companyData, userPreferences) {
   // Clamp score between 0 and 100
   const finalScore = Math.max(0, Math.min(100, score));
 
+  console.log('Vinegar: Alignment score calculated:', finalScore, 'from', breakdown.length, 'factors');
+
   return {
     score: finalScore,
     breakdown: breakdown
   };
+}
+
+/**
+ * Calculate location bonus for alternatives based on distance
+ */
+function calculateLocationBonus(distance) {
+  if (!distance || distance < 0) return 0;
+
+  if (distance < 2) {
+    return 30; // Very close - walking distance
+  } else if (distance < 5) {
+    return 20; // Close - short drive
+  } else if (distance < 10) {
+    return 10; // Reasonable distance
+  } else {
+    return 0; // Too far
+  }
 }
 
 /**
