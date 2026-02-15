@@ -1077,14 +1077,14 @@ function validateAndCleanData(data) {
 }
 
 /**
- * Find small online retailers using Bing Web Search API
+ * Find small online retailers using Brave Search API
  */
 async function findSmallOnlineRetailers(productName, productCategory) {
   console.log('Searching for small online retailers:', productName);
 
   // Check if we have search API configured
-  if (!CONFIG.BING_SEARCH_API_KEY || CONFIG.BING_SEARCH_API_KEY === 'YOUR_BING_SEARCH_API_KEY') {
-    console.log('Bing Search not configured, skipping online retailer search');
+  if (!CONFIG.BRAVE_SEARCH_API_KEY || CONFIG.BRAVE_SEARCH_API_KEY === 'YOUR_BRAVE_SEARCH_API_KEY') {
+    console.log('Brave Search not configured, skipping online retailer search');
     return [];
   }
 
@@ -1092,22 +1092,24 @@ async function findSmallOnlineRetailers(productName, productCategory) {
     // Build search query to exclude mega-corps
     const searchQuery = `${productName} buy online -amazon -walmart -target -ebay -alibaba -aliexpress`;
 
-    const url = `https://api.bing.microsoft.com/v7.0/search?q=${encodeURIComponent(searchQuery)}&count=10&mkt=en-US`;
+    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(searchQuery)}&count=10`;
 
     const response = await fetch(url, {
       headers: {
-        'Ocp-Apim-Subscription-Key': CONFIG.BING_SEARCH_API_KEY
+        'Accept': 'application/json',
+        'X-Subscription-Token': CONFIG.BRAVE_SEARCH_API_KEY
       }
     });
 
     if (!response.ok) {
-      console.error('Bing Search API error:', response.status);
+      const errorText = await response.text();
+      console.error('Brave Search API error:', response.status, errorText);
       return [];
     }
 
     const data = await response.json();
 
-    if (!data.webPages || !data.webPages.value || data.webPages.value.length === 0) {
+    if (!data.web || !data.web.results || data.web.results.length === 0) {
       console.log('No online retailers found');
       return [];
     }
@@ -1115,7 +1117,7 @@ async function findSmallOnlineRetailers(productName, productCategory) {
     // Filter and process results
     const alternatives = [];
 
-    for (const item of data.webPages.value.slice(0, 5)) { // Limit to 5
+    for (const item of data.web.results.slice(0, 5)) { // Limit to 5
       const domain = new URL(item.url).hostname;
 
       // Skip mega-corps
@@ -1125,7 +1127,7 @@ async function findSmallOnlineRetailers(productName, productCategory) {
       }
 
       // Extract business name from title (usually "Product - Store Name")
-      const businessName = extractBusinessName(item.name, domain);
+      const businessName = extractBusinessName(item.title, domain);
 
       // Try to scrape price
       const price = await scrapePriceFromPage(item.url);
@@ -1135,7 +1137,7 @@ async function findSmallOnlineRetailers(productName, productCategory) {
         type: 'small-business',
         typeLabel: 'Small Business',
         url: item.url,
-        description: item.snippet,
+        description: item.description,
         price: price,
         priceDisplay: price || 'Visit site for pricing',
         rating: 4.5, // Default (we don't have real ratings from search)
