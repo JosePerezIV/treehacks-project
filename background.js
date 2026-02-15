@@ -500,7 +500,7 @@ async function findLocalAlternatives(productCategory, userLocation, analysis, cu
     const filteredPlaces = filterAndScorePlaces(allPlaces, productCategory, analysis, currentSite);
 
     console.log('Found local alternatives:', filteredPlaces.length);
-    return filteredPlaces.slice(0, 6); // Return top 6
+    return filteredPlaces.slice(0, 3); // Return top 3 highest quality
 
   } catch (error) {
     console.error('Error finding local alternatives:', error);
@@ -1117,12 +1117,20 @@ async function findSmallOnlineRetailers(productName, productCategory) {
     // Filter and process results
     const alternatives = [];
 
-    for (const item of data.web.results.slice(0, 5)) { // Limit to 5
+    for (const item of data.web.results.slice(0, 8)) { // Check up to 8 results
       const domain = new URL(item.url).hostname;
 
       // Skip mega-corps
       if (isMegaCorp(domain)) {
         console.log('Filtered out mega-corp:', domain);
+        continue;
+      }
+
+      // Skip irrelevant domains (marketplaces, comparison sites, generic retailers)
+      const irrelevantDomains = ['reddit', 'quora', 'youtube', 'facebook', 'instagram',
+                                 'twitter', 'pinterest', 'tiktok', 'wikipedia'];
+      if (irrelevantDomains.some(d => domain.includes(d))) {
+        console.log('Filtered out irrelevant domain:', domain);
         continue;
       }
 
@@ -1144,14 +1152,22 @@ async function findSmallOnlineRetailers(productName, productCategory) {
         availability: 'Check website',
         source: 'Web Search',
         isReal: true,
-        actions: [
-          { type: 'visit', label: '🛒 Visit Website', url: item.url }
-        ]
+        hasPrice: !!price // Track if we got a real price
       });
     }
 
-    console.log('Found', alternatives.length, 'small online retailers');
-    return alternatives;
+    // Sort: Prioritize results with actual scraped prices
+    alternatives.sort((a, b) => {
+      if (a.hasPrice && !b.hasPrice) return -1;
+      if (!a.hasPrice && b.hasPrice) return 1;
+      return 0;
+    });
+
+    // Return only top 2 best results (preferably with prices)
+    const topResults = alternatives.slice(0, 2);
+    console.log('Found', topResults.length, 'high-quality online retailers',
+                `(${topResults.filter(a => a.hasPrice).length} with prices)`);
+    return topResults;
 
   } catch (error) {
     console.error('Error finding online retailers:', error);
