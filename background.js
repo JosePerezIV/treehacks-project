@@ -1120,9 +1120,22 @@ async function findSmallOnlineRetailers(productName, productCategory) {
 
       // Skip irrelevant domains (marketplaces, comparison sites, generic retailers)
       const irrelevantDomains = ['reddit', 'quora', 'youtube', 'facebook', 'instagram',
-                                 'twitter', 'pinterest', 'tiktok', 'wikipedia'];
+                                 'twitter', 'pinterest', 'tiktok', 'wikipedia', 'ebay',
+                                 'comparison', 'review', 'deals', 'coupons'];
       if (irrelevantDomains.some(d => domain.includes(d))) {
         console.log('Filtered out irrelevant domain:', domain);
+        continue;
+      }
+
+      // Skip if title/description doesn't seem product-related
+      const titleLower = item.title.toLowerCase();
+      const descLower = (item.description || '').toLowerCase();
+      const genericPhrases = ['eco-friendly', 'sustainable living', 'zero waste', 'gift shop'];
+      const seemsGeneric = genericPhrases.every(phrase =>
+        titleLower.includes(phrase) || descLower.includes(phrase)
+      );
+      if (seemsGeneric && !titleLower.includes(productName.toLowerCase().split(' ')[0])) {
+        console.log('Filtered out generic/irrelevant result:', item.title);
         continue;
       }
 
@@ -1261,10 +1274,16 @@ async function scrapePriceFromPage(url) {
       const match = html.match(pattern);
       if (match) {
         const priceStr = match[1].replace(/,/g, '');
-        const price = parseFloat(priceStr);
+        let price = parseFloat(priceStr);
 
-        // Sanity check: price should be between $10 and $10,000
-        if (price >= 10 && price <= 10000) {
+        // Heuristic: If price has no decimal and is >$100, it's likely in cents
+        // Examples: 2700 = $27.00, 8018 = $80.18
+        if (!priceStr.includes('.') && price > 100) {
+          price = price / 100;
+        }
+
+        // Sanity check: price should be between $5 and $1,000 (most consumer products)
+        if (price >= 5 && price <= 1000) {
           return `$${price.toFixed(2)}`;
         }
       }
