@@ -71,7 +71,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const localAlternatives = await findLocalAlternatives(
             analysis.productCategory,
             request.userPreferences.location,
-            analysis
+            analysis,
+            request.currentSite // Pass current site to exclude it
           );
 
           // Add local alternatives to the response
@@ -440,8 +441,8 @@ function determineSearchRadius(userLocation) {
 /**
  * Find real local alternatives using Google Places API (New)
  */
-async function findLocalAlternatives(productCategory, userLocation, analysis) {
-  console.log('Finding local alternatives:', { productCategory, userLocation, analysis });
+async function findLocalAlternatives(productCategory, userLocation, analysis, currentSite = null) {
+  console.log('Finding local alternatives:', { productCategory, userLocation, analysis, currentSite });
 
   if (!userLocation || !userLocation.lat || !userLocation.lon) {
     console.log('No user location available, skipping Google Places search');
@@ -484,7 +485,7 @@ async function findLocalAlternatives(productCategory, userLocation, analysis) {
     }
 
     // Filter and score places by relevance
-    const filteredPlaces = filterAndScorePlaces(allPlaces, productCategory, analysis);
+    const filteredPlaces = filterAndScorePlaces(allPlaces, productCategory, analysis, currentSite);
 
     console.log('Found local alternatives:', filteredPlaces.length);
     return filteredPlaces.slice(0, 6); // Return top 6
@@ -561,8 +562,9 @@ function addUniquePlaces(allPlaces, newPlaces, seenPlaceIds) {
 /**
  * Filter and score places by relevance
  */
-function filterAndScorePlaces(places, productCategory, analysis) {
+function filterAndScorePlaces(places, productCategory, analysis, currentSite = null) {
   const categoryLower = productCategory.toLowerCase();
+  const currentSiteLower = currentSite ? currentSite.toLowerCase() : '';
 
   // Irrelevant types to filter out
   const irrelevantTypes = [
@@ -593,6 +595,15 @@ function filterAndScorePlaces(places, productCategory, analysis) {
       // Filter out closed businesses
       if (place.businessStatus === 'CLOSED_PERMANENTLY' || place.businessStatus === 'CLOSED_TEMPORARILY') {
         return false;
+      }
+
+      // CRITICAL: Filter out current retailer (don't show Best Buy when on bestbuy.com)
+      if (currentSiteLower) {
+        const placeName = (place.displayName?.text || '').toLowerCase();
+        if (placeName.includes(currentSiteLower) || currentSiteLower.includes(placeName.split(' ')[0])) {
+          console.log('Filtered out', place.displayName?.text, '- current retailer');
+          return false;
+        }
       }
 
       // Filter out irrelevant types

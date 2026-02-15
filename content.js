@@ -190,7 +190,9 @@ function extractBestBuyProduct() {
     '[data-testid="customer-price"]',
     '.priceView-customer-price',
     '.pricing-price__regular-price',
-    'div[class*="priceView"] span[aria-hidden="true"]'
+    'div[class*="priceView"] span[aria-hidden="true"]',
+    '[class*="priceView"] [class*="priceView-customer-price"]',
+    'div[data-testid="pricing"] span'
   ];
 
   let priceElement = null;
@@ -202,15 +204,31 @@ function extractBestBuyProduct() {
     }
   }
 
-  // Fallback: try any element with "price" in class
+  // Fallback 1: try any element with "price" in class that looks like a price
   if (!priceElement || !priceElement.textContent.trim()) {
-    console.log('Vinegar: Trying fallback - any price element');
+    console.log('Vinegar: Trying fallback 1 - any price element with $');
     const allPrices = document.querySelectorAll('[class*="price"]');
     for (const priceEl of allPrices) {
       const text = priceEl.textContent.trim();
-      if (text.includes('$') && text.length < 20) { // Looks like a price
+      // Look for "$XX.XX" or "$X,XXX.XX" format
+      if (/\$[\d,]+\.?\d*/.test(text) && text.length < 30) {
         priceElement = priceEl;
-        console.log('Vinegar: Found price using fallback');
+        console.log('Vinegar: Found price using fallback 1:', text);
+        break;
+      }
+    }
+  }
+
+  // Fallback 2: search entire page for price-like patterns
+  if (!priceElement || !priceElement.textContent.trim()) {
+    console.log('Vinegar: Trying fallback 2 - searching all elements for price pattern');
+    const allElements = document.querySelectorAll('span, div');
+    for (const el of allElements) {
+      const text = el.textContent.trim();
+      // Very specific: starts with $, followed by digits, possibly comma, possibly decimal
+      if (/^\$[\d,]+\.?\d*$/.test(text) && text.length < 15 && parseFloat(text.replace(/[$,]/g, '')) > 10) {
+        priceElement = el;
+        console.log('Vinegar: Found price using fallback 2:', text);
         break;
       }
     }
@@ -405,6 +423,7 @@ async function analyzeProductWithAPI(data) {
     chrome.runtime.sendMessage({
       action: 'analyzeProduct',
       productName: data.name,
+      currentSite: data.site, // Pass current site to filter it from alternatives
       userPreferences: userPreferences
     }, (response) => {
       showAnalysisLoading(false);
