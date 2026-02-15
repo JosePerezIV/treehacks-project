@@ -1111,10 +1111,11 @@ async function findSmallOnlineRetailers(productName, productCategory) {
 
     for (const item of data.web.results.slice(0, 8)) { // Check up to 8 results
       const domain = new URL(item.url).hostname;
+      console.log('Vinegar: Checking domain:', domain, 'for product:', productName);
 
       // Skip mega-corps
       if (isMegaCorp(domain)) {
-        console.log('Filtered out mega-corp:', domain);
+        console.log('Vinegar: ❌ Filtered mega-corp:', domain);
         continue;
       }
 
@@ -1124,10 +1125,13 @@ async function findSmallOnlineRetailers(productName, productCategory) {
         'tiktok', 'wikipedia', 'ebay', 'comparison', 'review', 'deals', 'coupons',
         'packagefree', 'earthhero', 'treehugger', 'sustainablejungle', 'greenmatters'
       ];
-      if (irrelevantDomains.some(d => domain.toLowerCase().includes(d))) {
-        console.log('Filtered out irrelevant domain:', domain);
+      const domainLower = domain.toLowerCase();
+      const isIrrelevant = irrelevantDomains.some(d => domainLower.includes(d));
+      if (isIrrelevant) {
+        console.log('Vinegar: ❌ Filtered irrelevant domain:', domain, '(matched:', irrelevantDomains.find(d => domainLower.includes(d)), ')');
         continue;
       }
+      console.log('Vinegar: ✅ Domain passed filter:', domain);
 
       // Skip if description suggests it's a generic eco/lifestyle shop (not specific product retailer)
       const titleLower = item.title.toLowerCase();
