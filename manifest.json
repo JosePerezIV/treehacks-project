@@ -11,7 +11,8 @@
     "https://*.amazon.com/*",
     "https://*.walmart.com/*",
     "https://*.target.com/*",
-    "https://*.bestbuy.com/*"
+    "https://*.bestbuy.com/*",
+    "https://api.anthropic.com/*"
   ],
   "background": {
     "service_worker": "background.js"
