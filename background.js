@@ -558,8 +558,26 @@ function filterAndScorePlaces(places, productCategory, analysis) {
   const irrelevantTypes = [
     'library', 'school', 'university', 'hospital', 'church', 'mosque',
     'synagogue', 'cemetery', 'park', 'stadium', 'museum', 'art_gallery',
-    'movie_theater', 'bowling_alley', 'casino', 'night_club', 'bar'
+    'movie_theater', 'bowling_alley', 'casino', 'night_club', 'bar',
+    'furniture_store', 'car_dealer', 'car_repair', 'gas_station',
+    'atm', 'bank', 'insurance_agency', 'real_estate_agency'
   ];
+
+  // Category-specific filtering
+  const categoryLower = productCategory.toLowerCase();
+  const categorySpecificFilters = {};
+
+  // For luggage/bags, exclude furniture and general leather stores
+  if (categoryLower.includes('luggage') || categoryLower.includes('bag') || categoryLower.includes('travel')) {
+    categorySpecificFilters.exclude = ['furniture_store'];
+    categorySpecificFilters.excludeNames = ['furniture', 'sofa', 'couch'];
+  }
+
+  // For water bottles, exclude plumbing and industrial
+  if (categoryLower.includes('bottle') || categoryLower.includes('drinkware')) {
+    categorySpecificFilters.exclude = ['plumber', 'hardware_store'];
+    categorySpecificFilters.excludeNames = ['plumbing', 'supply'];
+  }
 
   return places
     .filter(place => {
@@ -572,6 +590,23 @@ function filterAndScorePlaces(places, productCategory, analysis) {
       const placeTypes = place.types || [];
       if (placeTypes.some(type => irrelevantTypes.includes(type))) {
         return false;
+      }
+
+      // Category-specific filtering
+      if (categorySpecificFilters.exclude) {
+        if (placeTypes.some(type => categorySpecificFilters.exclude.includes(type))) {
+          console.log('Filtered out', place.displayName?.text, '- excluded type');
+          return false;
+        }
+      }
+
+      // Filter by name keywords
+      if (categorySpecificFilters.excludeNames) {
+        const placeName = (place.displayName?.text || '').toLowerCase();
+        if (categorySpecificFilters.excludeNames.some(keyword => placeName.includes(keyword))) {
+          console.log('Filtered out', place.displayName?.text, '- excluded keyword in name');
+          return false;
+        }
       }
 
       return true;
@@ -668,12 +703,21 @@ Analyze this product and provide FACTUAL information (do NOT calculate a score):
    - Competition: "2018 FTC antitrust investigation"
    Only include documented, verifiable information with approximate dates
 5. Certifications: ["B-Corp", "Fair Trade", "Carbon Neutral"] or [] if none
-6. Product category (specific)
-7. Store types that sell this product locally
-8. Brief, factual explanation of why someone might consider alternatives for this type of product
-   - Focus on FACTS and IMPACT, not moral judgments
-   - Example: "Supporting local businesses generates 3x more local economic activity"
-   - Example: "Small businesses account for 65% of new jobs in this sector"
+6. Product category (be VERY specific about the PRODUCT TYPE, not material):
+   - For "Leather Weekender Bag" → say "Travel Luggage" or "Weekender Bags"
+   - For "Stainless Steel Water Bottle" → say "Reusable Water Bottles"
+   - For "Cotton T-Shirt" → say "Apparel" or "Clothing"
+   - Focus on what the product IS, not what it's made of!
+7. Store types that would actually sell THIS PRODUCT (be precise!):
+   - For travel bags: "luggage store", "travel store", "department store"
+     NOT "leather goods store" or "furniture store"
+   - For water bottles: "sporting goods", "outdoor equipment", "target"
+     NOT "plumbing supply" or "kitchenware only"
+   - Think: WHERE would someone actually shop for this specific product?
+8. Brief, factual explanation of why someone might consider alternatives
+   - Reference the user's specific location: "${location.display}"
+   - Use real estimates with dollar amounts
+   - Example: "In ${location.display}, local businesses recirculate 68% of revenue locally vs 43% for national chains"
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {

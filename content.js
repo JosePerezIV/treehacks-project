@@ -318,11 +318,14 @@ async function analyzeProductWithAPI(data) {
         // Always use fallback on error
         const fallback = getFallbackAnalysis(data.name);
         updateCompanyAnalysis(fallback);
-        updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+        const explanation = fallback.impactExplanation || fallback.costBenefitAnalysis || 'Exploring alternatives helps support local economies.';
+        updateCostBenefitAnalysis(explanation);
       } else {
         // Update UI with results
         updateCompanyAnalysis(response);
-        updateCostBenefitAnalysis(response.costBenefitAnalysis);
+        // Use impactExplanation (new field) or costBenefitAnalysis (legacy)
+        const explanation = response.impactExplanation || response.costBenefitAnalysis || 'Exploring alternatives helps support diverse business ownership and local economies.';
+        updateCostBenefitAnalysis(explanation);
 
         // If we have real local alternatives, use them
         if (response.localAlternatives && response.localAlternatives.length > 0) {
@@ -340,7 +343,8 @@ async function analyzeProductWithAPI(data) {
 
     const fallback = getFallbackAnalysis(data.name);
     updateCompanyAnalysis(fallback);
-    updateCostBenefitAnalysis(fallback.costBenefitAnalysis);
+    const explanation = fallback.impactExplanation || fallback.costBenefitAnalysis || 'Exploring alternatives helps support local economies.';
+    updateCostBenefitAnalysis(explanation);
     showAnalysisLoading(false);
   }
 }
