@@ -59,47 +59,52 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Bramble: CONFIG available?', typeof CONFIG !== 'undefined');
     console.log('Bramble: API key available?', typeof CONFIG !== 'undefined' && CONFIG.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
-    // Step 1: Analyze with Claude
+    // Step 1: Analyze with Claude and send immediately (don't wait for alternatives)
     analyzeProduct(request.productName, request.userPreferences)
       .then(async analysis => {
-        console.log('Bramble: Analysis successful');
+        console.log('Bramble: Analysis successful, sending immediately');
 
-        // Step 2: Find real local alternatives using Google Places (if enabled)
-        let localAlternatives = [];
-        const supportLocal = request.userPreferences.supportLocal !== false; // Default true
-        if (supportLocal) {
-          try {
-            localAlternatives = await findLocalAlternatives(
-              analysis.productCategory,
-              request.userPreferences.location,
-              analysis,
-              request.currentSite // Pass current site to exclude it
-            );
-            console.log('Bramble: Found', localAlternatives.length, 'local alternatives');
-          } catch (placesError) {
-            console.error('Bramble: Google Places error:', placesError);
-          }
-        } else {
-          console.log('Bramble: Local business search disabled by user preference');
-        }
+        // Send analysis right away so UI updates instantly
+        sendResponse(analysis);
 
-        // Step 3: Find small online retailers using web search
-        let onlineAlternatives = [];
-        try {
-          onlineAlternatives = await findSmallOnlineRetailers(
+        // Step 2 & 3: Find alternatives in the background (parallel)
+        const supportLocal = request.userPreferences.supportLocal !== false;
+
+        Promise.all([
+          // Local alternatives
+          supportLocal
+            ? findLocalAlternatives(
+                analysis.productCategory,
+                request.userPreferences.location,
+                analysis,
+                request.currentSite
+              ).catch(err => {
+                console.error('Bramble: Google Places error:', err);
+                return [];
+              })
+            : Promise.resolve([]),
+
+          // Online alternatives
+          findSmallOnlineRetailers(
             request.productName,
             analysis.productCategory
-          );
-          console.log('Bramble: Found', onlineAlternatives.length, 'online alternatives');
-        } catch (searchError) {
-          console.error('Bramble: Web search error:', searchError);
-        }
+          ).catch(err => {
+            console.error('Bramble: Web search error:', err);
+            return [];
+          })
+        ]).then(([localAlternatives, onlineAlternatives]) => {
+          console.log('Bramble: Found alternatives:', localAlternatives.length, 'local,', onlineAlternatives.length, 'online');
 
-        // Combine alternatives: local first, then online
-        analysis.localAlternatives = [...localAlternatives, ...onlineAlternatives];
-
-        console.log('Bramble: Sending complete response with', analysis.localAlternatives.length, 'total alternatives');
-        sendResponse(analysis);
+          // Send alternatives as a separate message to content script
+          chrome.tabs.sendMessage(sender.tab.id, {
+            action: 'alternativesReady',
+            localAlternatives: localAlternatives,
+            onlineAlternatives: onlineAlternatives,
+            allAlternatives: [...localAlternatives, ...onlineAlternatives]
+          }).catch(() => {
+            // Tab might be closed, ignore
+          });
+        });
       })
       .catch(error => {
         console.error('Bramble: Analysis failed:', error);

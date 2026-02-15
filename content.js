@@ -15,6 +15,18 @@ let isMapVisible = false;
 console.log('Bramble: Content script loaded, Leaflet available:', typeof L !== 'undefined');
 
 /**
+ * Listen for alternatives from background script
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'alternativesReady') {
+    console.log('Bramble: Alternatives ready:', message.allAlternatives.length, 'total');
+    if (message.allAlternatives && message.allAlternatives.length > 0) {
+      displayRealAlternatives(message.allAlternatives, []);
+    }
+  }
+});
+
+/**
  * Detect which site we're on and extract product information
  */
 async function detectAndExtractProduct() {
@@ -470,19 +482,13 @@ async function analyzeProductWithAPI(data) {
         const explanation = fallback.impactExplanation || fallback.costBenefitAnalysis || 'Exploring alternatives helps support local economies.';
         updateCostBenefitAnalysis(explanation);
       } else {
-        // Update UI with results
+        // Update UI with company analysis immediately
         updateCompanyAnalysis(response);
         // Use impactExplanation (new field) or costBenefitAnalysis (legacy)
         const explanation = response.impactExplanation || response.costBenefitAnalysis || 'Exploring alternatives helps support diverse business ownership and local economies.';
         updateCostBenefitAnalysis(explanation);
 
-        // If we have real local alternatives, use them
-        if (response.localAlternatives && response.localAlternatives.length > 0) {
-          console.log('Bramble: Using real local alternatives from Google Places');
-          displayRealAlternatives(response.localAlternatives, response.alternativeTypes);
-        }
-
-        console.log('Bramble: API analysis complete');
+        console.log('Bramble: Company analysis complete - alternatives loading in background');
       }
     });
 
