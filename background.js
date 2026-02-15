@@ -4,13 +4,19 @@
  */
 
 // Import config (using classic service worker approach, not ES6 modules)
-importScripts('config.js');
+try {
+  importScripts('config.js');
+  console.log('Vinegar: config.js loaded successfully');
+} catch (error) {
+  console.error('Vinegar: Failed to load config.js:', error);
+}
 
 // Verify API key loaded
-console.log('Vinegar: API key loaded:', CONFIG?.ANTHROPIC_API_KEY ? 'Yes' : 'No');
+console.log('Vinegar: API key loaded:', typeof CONFIG !== 'undefined' && CONFIG?.ANTHROPIC_API_KEY ? 'Yes' : 'No');
 
-if (!CONFIG || !CONFIG.ANTHROPIC_API_KEY) {
+if (typeof CONFIG === 'undefined' || !CONFIG || !CONFIG.ANTHROPIC_API_KEY) {
   console.error('Vinegar: CONFIG or API key not found! Make sure config.js exists and is properly formatted.');
+  console.error('Vinegar: CONFIG type:', typeof CONFIG);
 }
 
 // Initialize extension on install
@@ -51,7 +57,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // Handle API analysis request from content script
   if (request.action === 'analyzeProduct') {
-    console.log('Vinegar: Processing analyzeProduct request');
+    console.log('Vinegar: Processing analyzeProduct request for:', request.productName);
+    console.log('Vinegar: CONFIG available?', typeof CONFIG !== 'undefined');
+    console.log('Vinegar: API key available?', typeof CONFIG !== 'undefined' && CONFIG.ANTHROPIC_API_KEY ? 'Yes' : 'No');
+
     analyzeProduct(request.productName, request.userPreferences)
       .then(analysis => {
         console.log('Vinegar: Analysis successful, sending response');
@@ -59,6 +68,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       })
       .catch(error => {
         console.error('Vinegar: Analysis failed:', error);
+        console.error('Vinegar: Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
         sendResponse({ error: error.message });
       });
     return true; // Keep channel open for async response
@@ -312,7 +326,15 @@ async function analyzeProduct(productName, userPreferences = {}) {
     return analysis;
 
   } catch (error) {
-    console.error('Vinegar API: Error:', error);
+    console.error('Vinegar API: Error during analysis:', error);
+    console.error('Vinegar API: Error type:', error.name);
+    console.error('Vinegar API: Error message:', error.message);
+
+    // Re-throw with more context if it's a generic fetch error
+    if (error.message === 'Failed to fetch') {
+      throw new Error('NETWORK_ERROR: Could not connect to Anthropic API. Check your internet connection.');
+    }
+
     throw error;
   }
 }
