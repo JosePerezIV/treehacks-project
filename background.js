@@ -723,10 +723,13 @@ Analyze this product and provide FACTUAL information (do NOT calculate a score):
    - For water bottles: "sporting goods", "outdoor equipment", "target"
      NOT "plumbing supply" or "kitchenware only"
    - Think: WHERE would someone actually shop for this specific product?
-8. Brief, factual explanation of why someone might consider alternatives
+8. Brief, factual explanation of why someone might consider alternatives${location && location.display ? `
    - Reference the user's specific location: "${location.display}"
    - Use real estimates with dollar amounts
-   - Example: "In ${location.display}, local businesses recirculate 68% of revenue locally vs 43% for national chains"
+   - Example: "In ${location.display}, local businesses recirculate 68% of revenue locally vs 43% for national chains"` : `
+   - Provide factual information about local business impact
+   - Use general estimates with dollar amounts
+   - Example: "Local businesses typically recirculate 68% of revenue locally vs 43% for national chains"`}
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
