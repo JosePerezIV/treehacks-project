@@ -285,11 +285,15 @@ async function injectSidePanel(data) {
   productData = data;
 
   try {
-    // Load user location from storage
-    const settings = await chrome.storage.sync.get('settings');
-    if (settings.settings?.location) {
-      userLocation = settings.settings.location;
-      console.log('Vinegar: User location loaded:', userLocation);
+    // Load user location from storage (with safety check)
+    if (chrome?.storage?.sync) {
+      const settings = await chrome.storage.sync.get('settings');
+      if (settings.settings?.location) {
+        userLocation = settings.settings.location;
+        console.log('Vinegar: User location loaded:', userLocation);
+      }
+    } else {
+      console.warn('Vinegar: chrome.storage not available, skipping location load');
     }
 
     // Leaflet and utils.js are now loaded via manifest.json content_scripts
@@ -412,12 +416,23 @@ async function analyzeProductWithAPI(data) {
   showAnalysisLoading(true);
 
   try {
-    // Get user preferences
-    const settings = await chrome.storage.sync.get('settings');
-    const userPreferences = {
-      avoidedBrands: settings.settings?.avoidedBrands || [],
-      location: settings.settings?.location || null
+    // Get user preferences (with safety check)
+    let userPreferences = {
+      avoidedBrands: [],
+      location: null,
+      supportLocal: true,
+      sustainableProducts: true
     };
+
+    if (chrome?.storage?.sync) {
+      const settings = await chrome.storage.sync.get('settings');
+      userPreferences = {
+        avoidedBrands: settings.settings?.avoidedBrands || [],
+        location: settings.settings?.location || null,
+        supportLocal: settings.settings?.supportLocal !== false,
+        sustainableProducts: settings.settings?.sustainableProducts !== false
+      };
+    }
 
     // Call API via background script (avoids CORS issues)
     chrome.runtime.sendMessage({
@@ -690,9 +705,12 @@ async function loadAlternatives(data) {
     return;
   }
 
-  // Check if location is set
-  const settings = await chrome.storage.sync.get('settings');
-  const hasLocation = settings.settings?.location?.lat && settings.settings?.location?.lon;
+  // Check if location is set (with safety check)
+  let hasLocation = false;
+  if (chrome?.storage?.sync) {
+    const settings = await chrome.storage.sync.get('settings');
+    hasLocation = settings.settings?.location?.lat && settings.settings?.location?.lon;
+  }
 
   if (!hasLocation) {
     // Show prompt to set location instead of fake alternatives
@@ -1282,6 +1300,12 @@ function createAlternativeCard(alt) {
  */
 async function updateImpactStats(productPrice, alternativesCount, closestDistance) {
   try {
+    // Safety check for chrome.storage
+    if (!chrome?.storage?.local) {
+      console.warn('Vinegar: chrome.storage.local not available, skipping stats update');
+      return;
+    }
+
     const result = await chrome.storage.local.get('impactData');
     const impact = result.impactData || {
       alternativesViewed: 0,
